@@ -1,64 +1,420 @@
-import Image from "next/image";
+'use client';
+
+import { useEffect, useState, useRef } from 'react';
+import Link from 'next/link';
+import AutomationModal from './components/AutomationModal';
+
+interface Job {
+  id: number;
+  jobUrl: string;
+  company: string;
+  title: string;
+  description: string;
+  matchScore: number | null;
+  status: 'new' | 'rejected' | 'approved' | 'applied';
+  createdAt: string;
+}
+
+interface AutomationUpdate {
+  type: 'automation_started' | 'automation_filling' | 'automation_paused' | 'automation_submitted' | 'automation_cancelled' | 'automation_error';
+  automationId: string;
+  jobId: number;
+  message: string;
+  timestamp: string;
+}
 
 export default function Home() {
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<'new' | 'all'>('new');
+  
+  // Automation modal state
+  const [modalOpen, setModalOpen] = useState(false);
+  const [automationStatus, setAutomationStatus] = useState<'filling' | 'paused' | 'submitted' | 'error' | null>(null);
+  const [automationMessage, setAutomationMessage] = useState('');
+  const [currentJobTitle, setCurrentJobTitle] = useState('');
+  const [currentAutomationId, setCurrentAutomationId] = useState<string | null>(null);
+  
+  const wsRef = useRef<WebSocket | null>(null);
+
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001/ws';
+
+  useEffect(() => {
+    fetchJobs();
+    connectWebSocket();
+
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+    };
+  }, [filter]);
+
+  const connectWebSocket = () => {
+    try {
+      const ws = new WebSocket(WS_URL);
+      
+      ws.onopen = () => {
+        console.log('WebSocket connected');
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          
+          if (data.type === 'connected') {
+            console.log('WebSocket connection confirmed');
+            return;
+          }
+
+          handleAutomationUpdate(data as AutomationUpdate);
+        } catch (error) {
+          console.error('Error parsing WebSocket message:', error);
+        }
+      };
+
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+      };
+
+      ws.onclose = () => {
+        console.log('WebSocket disconnected');
+        // Reconnect after 3 seconds
+        setTimeout(connectWebSocket, 3000);
+      };
+
+      wsRef.current = ws;
+    } catch (error) {
+      console.error('Error connecting to WebSocket:', error);
+    }
+  };
+
+  const handleAutomationUpdate = (update: AutomationUpdate) => {
+    console.log('Automation update:', update);
+    
+    // Find the job
+    const job = jobs.find(j => j.id === update.jobId);
+    if (job) {
+      setCurrentJobTitle(`${job.company} - ${job.title}`);
+    }
+
+    setCurrentAutomationId(update.automationId);
+    setAutomationMessage(update.message);
+
+    switch (update.type) {
+      case 'automation_started':
+        setModalOpen(true);
+        setAutomationStatus('filling');
+        break;
+      case 'automation_filling':
+        setModalOpen(true);
+        setAutomationStatus('filling');
+        break;
+      case 'automation_paused':
+        setModalOpen(true);
+        setAutomationStatus('paused');
+        break;
+      case 'automation_submitted':
+        setAutomationStatus('submitted');
+        fetchJobs(); // Refresh jobs list
+        setTimeout(() => {
+          setModalOpen(false);
+          setAutomationStatus(null);
+        }, 3000);
+        break;
+      case 'automation_cancelled':
+        setModalOpen(false);
+        setAutomationStatus(null);
+        break;
+      case 'automation_error':
+        setModalOpen(true);
+        setAutomationStatus('error');
+        break;
+    }
+  };
+
+  const fetchJobs = async () => {
+    try {
+      setLoading(true);
+      const url = filter === 'new' 
+        ? `${API_URL}/api/jobs?status=new`
+        : `${API_URL}/api/jobs`;
+      
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      // Sort by match score descending
+      const sorted = data.sort((a: Job, b: Job) => {
+        if (a.matchScore === null) return 1;
+        if (b.matchScore === null) return -1;
+        return b.matchScore - a.matchScore;
+      });
+      
+      setJobs(sorted);
+    } catch (error) {
+      console.error('Error fetching jobs:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleProceed = async (jobId: number) => {
+    try {
+      // Update status to approved
+      await fetch(`${API_URL}/api/jobs/${jobId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'approved' }),
+      });
+
+      // Refresh jobs list
+      fetchJobs();
+      
+      alert('Job approved! You can now start automation from the approved jobs list.');
+    } catch (error) {
+      console.error('Error approving job:', error);
+      alert('Failed to approve job');
+    }
+  };
+
+  const handleDismiss = async (jobId: number) => {
+    try {
+      await fetch(`${API_URL}/api/jobs/${jobId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'rejected' }),
+      });
+
+      // Refresh jobs list
+      fetchJobs();
+    } catch (error) {
+      console.error('Error dismissing job:', error);
+      alert('Failed to dismiss job');
+    }
+  };
+
+  const handleConfirmSubmission = async () => {
+    if (!currentAutomationId) return;
+
+    try {
+      await fetch(`${API_URL}/api/automation/confirm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ automationId: currentAutomationId }),
+      });
+    } catch (error) {
+      console.error('Error confirming submission:', error);
+      alert('Failed to confirm submission');
+    }
+  };
+
+  const handleCancelAutomation = async () => {
+    if (!currentAutomationId) {
+      setModalOpen(false);
+      return;
+    }
+
+    try {
+      await fetch(`${API_URL}/api/automation/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ automationId: currentAutomationId }),
+      });
+      
+      setModalOpen(false);
+      setAutomationStatus(null);
+    } catch (error) {
+      console.error('Error cancelling automation:', error);
+      alert('Failed to cancel automation');
+    }
+  };
+
+  const handleKillSwitch = async () => {
+    if (!confirm('⚠️ This will immediately stop ALL automation sessions. Are you sure?')) {
+      return;
+    }
+
+    try {
+      await fetch(`${API_URL}/api/automation/kill`, {
+        method: 'POST',
+      });
+      
+      setModalOpen(false);
+      setAutomationStatus(null);
+      alert('Kill switch activated - all automation stopped');
+    } catch (error) {
+      console.error('Error activating kill switch:', error);
+      alert('Failed to activate kill switch');
+    }
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <div className="min-h-screen bg-gray-50">
+      {/* Automation Modal */}
+      <AutomationModal
+        isOpen={modalOpen}
+        status={automationStatus}
+        message={automationMessage}
+        jobTitle={currentJobTitle}
+        onConfirm={handleConfirmSubmission}
+        onCancel={handleCancelAutomation}
+        onKillSwitch={handleKillSwitch}
+      />
+
+      {/* Header */}
+      <header className="bg-white shadow">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex justify-between items-center">
+            <h1 className="text-3xl font-bold text-gray-900">
+              Job Search Agent
+            </h1>
+            <Link 
+              href="/profile"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+              My Profile
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Filter Tabs */}
+        <div className="mb-6 border-b border-gray-200">
+          <nav className="flex space-x-8">
+            <button
+              onClick={() => setFilter('new')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                filter === 'new'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
             >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+              New Jobs
+            </button>
+            <button
+              onClick={() => setFilter('all')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                filter === 'all'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              All Jobs
+            </button>
+          </nav>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+
+        {/* Loading State */}
+        {loading && (
+          <div className="text-center py-12">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <p className="mt-4 text-gray-600">Loading jobs...</p>
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!loading && jobs.length === 0 && (
+          <div className="text-center py-12 bg-white rounded-lg shadow">
+            <svg
+              className="mx-auto h-12 w-12 text-gray-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+              />
+            </svg>
+            <h3 className="mt-2 text-sm font-medium text-gray-900">No jobs found</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              Run the background worker to scrape jobs from LinkedIn and Indeed.
+            </p>
+          </div>
+        )}
+
+        {/* Jobs List */}
+        {!loading && jobs.length > 0 && (
+          <div className="space-y-4">
+            {jobs.map((job) => (
+              <div
+                key={job.id}
+                className="bg-white rounded-lg shadow hover:shadow-md transition p-6"
+              >
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h2 className="text-xl font-semibold text-gray-900">
+                        {job.title}
+                      </h2>
+                      {job.matchScore !== null && (
+                        <span
+                          className={`px-3 py-1 rounded-full text-sm font-medium ${
+                            job.matchScore >= 80
+                              ? 'bg-green-100 text-green-800'
+                              : job.matchScore >= 60
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}
+                        >
+                          {job.matchScore}% Match
+                        </span>
+                      )}
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          job.status === 'new'
+                            ? 'bg-blue-100 text-blue-800'
+                            : job.status === 'approved'
+                            ? 'bg-purple-100 text-purple-800'
+                            : job.status === 'applied'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}
+                      >
+                        {job.status}
+                      </span>
+                    </div>
+                    <p className="text-gray-600 font-medium mb-2">{job.company}</p>
+                    <p className="text-gray-700 text-sm line-clamp-3 mb-4">
+                      {job.description}
+                    </p>
+                    <a
+                      href={job.jobUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                    >
+                      View Job →
+                    </a>
+                  </div>
+
+                  {/* Action Buttons */}
+                  {job.status === 'new' && (
+                    <div className="flex gap-2 ml-4">
+                      <button
+                        onClick={() => handleProceed(job.id)}
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium"
+                      >
+                        Proceed
+                      </button>
+                      <button
+                        onClick={() => handleDismiss(job.id)}
+                        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </main>
     </div>
   );

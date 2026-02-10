@@ -62,7 +62,7 @@ export abstract class BaseScraper {
   }
 
   /**
-   * Navigate to URL with rate limiting
+   * Navigate to URL with rate limiting and exponential backoff for 429 responses
    */
   protected async navigateWithRateLimit(url: string): Promise<void> {
     if (!this.page) {
@@ -72,7 +72,44 @@ export abstract class BaseScraper {
     const domain = new URL(url).hostname;
     await this.enforceRateLimit(domain);
     
-    await this.page.goto(url, { waitUntil: 'networkidle' });
+    // Exponential backoff delays for 429 responses: 60s, 120s, 240s
+    const backoffDelays = [60000, 120000, 240000];
+    let attempt = 0;
+
+    while (attempt <= backoffDelays.length) {
+      try {
+        const response = await this.page.goto(url, { waitUntil: 'networkidle' });
+        
+        // Check for rate limiting
+        if (response && response.status() === 429) {
+          if (attempt < backoffDelays.length) {
+            const delay = backoffDelays[attempt];
+            console.log(`Rate limited (429) - backing off for ${delay}ms (attempt ${attempt + 1})`);
+            console.log(`[LOG] Rate limit encountered for ${domain} at ${new Date().toISOString()}`);
+            
+            await new Promise(resolve => setTimeout(resolve, delay));
+            attempt++;
+            continue;
+          } else {
+            throw new Error(`Rate limited after ${backoffDelays.length} retry attempts`);
+          }
+        }
+        
+        // Success - exit loop
+        return;
+      } catch (error) {
+        // If it's not a 429 error, rethrow
+        if (attempt === 0) {
+          throw error;
+        }
+        // If we've exhausted retries, rethrow
+        if (attempt >= backoffDelays.length) {
+          throw error;
+        }
+        // Otherwise, continue with backoff
+        attempt++;
+      }
+    }
   }
 
   /**
