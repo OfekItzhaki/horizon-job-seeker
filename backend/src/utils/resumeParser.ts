@@ -1,9 +1,37 @@
 import OpenAI from 'openai';
+import Groq from 'groq-sdk';
 import type { StructuredProfileData } from '../db/schema.js';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Lazy initialization to ensure env vars are loaded
+let openai: OpenAI | null = null;
+let groq: Groq | null = null;
+
+// Determine which AI provider to use
+const AI_PROVIDER = process.env.AI_PROVIDER || 'groq'; // Default to Groq (free!)
+
+function getOpenAI(): OpenAI {
+  if (!openai) {
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error('OPENAI_API_KEY environment variable is not set');
+    }
+    openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+  return openai;
+}
+
+function getGroq(): Groq {
+  if (!groq) {
+    if (!process.env.GROQ_API_KEY) {
+      throw new Error('GROQ_API_KEY environment variable is not set. Get a free key at https://console.groq.com');
+    }
+    groq = new Groq({
+      apiKey: process.env.GROQ_API_KEY,
+    });
+  }
+  return groq;
+}
 
 /**
  * Parse resume text and extract structured data using GPT-4o-mini
@@ -39,29 +67,65 @@ Return ONLY valid JSON in this exact format:
 Resume Text:
 ${resumeText}`;
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a resume parsing expert. Extract structured data from resumes and return only valid JSON.',
-        },
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-      temperature: 0.1,
-      max_tokens: 2000,
-    });
+    let content: string | null = null;
 
-    const content = response.choices[0]?.message?.content?.trim();
+    // Use Groq (free and fast!) or OpenAI based on configuration
+    if (AI_PROVIDER === 'groq') {
+      console.log('Using Groq AI for resume parsing (free tier)');
+      const groqClient = getGroq();
+      const response = await groqClient.chat.completions.create({
+        model: 'llama-3.3-70b-versatile', // Fast and accurate
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a resume parsing expert. Extract structured data from resumes and return only valid JSON.',
+          },
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        temperature: 0.1,
+        max_tokens: 2000,
+      });
+      content = response.choices[0]?.message?.content?.trim() || null;
+    } else {
+      console.log('Using OpenAI for resume parsing');
+      const openaiClient = getOpenAI();
+      const response = await openaiClient.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a resume parsing expert. Extract structured data from resumes and return only valid JSON.',
+          },
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        temperature: 0.1,
+        max_tokens: 2000,
+      });
+      content = response.choices[0]?.message?.content?.trim() || null;
+    }
     if (!content) {
       throw new Error('Empty response from LLM');
     }
 
+    // Clean up markdown code blocks if present (Groq sometimes wraps JSON in ```)
+    let cleanedContent = content;
+    if (content.startsWith('```')) {
+      // Remove markdown code blocks
+      cleanedContent = content
+        .replace(/^```json\s*/i, '')
+        .replace(/^```\s*/, '')
+        .replace(/\s*```$/, '')
+        .trim();
+    }
+
     // Parse JSON response
-    const parsed = JSON.parse(content);
+    const parsed = JSON.parse(cleanedContent);
     
     // Validate structure
     if (!parsed.workExperience || !Array.isArray(parsed.workExperience)) {

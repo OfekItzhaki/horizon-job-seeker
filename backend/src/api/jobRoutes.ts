@@ -34,8 +34,8 @@ router.get('/', async (req, res) => {
       query = query.where(eq(jobs.status, status as 'new' | 'rejected' | 'approved' | 'applied'));
     }
 
-    // Execute query and order by match_score descending
-    let results = await query.orderBy(desc(jobs.matchScore));
+    // Execute query and order by created_at descending (most recent first), then by match_score
+    let results = await query.orderBy(desc(jobs.createdAt), desc(jobs.matchScore));
 
     // Filter by minScore if provided (done in-memory since matchScore can be null)
     if (minScore !== undefined) {

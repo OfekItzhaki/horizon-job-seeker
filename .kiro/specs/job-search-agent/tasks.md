@@ -320,19 +320,19 @@ Each task builds on previous work, with property-based tests integrated close to
     - **Property 21: Error Resilience and Continuation**
     - **Validates: Requirements 10.1, 10.2, 10.3, 10.4**
 
-- [~] 17. Wire everything together and test end-to-end
-  - [~] 17.1 Set up environment variables and configuration
+- [x] 17. Wire everything together and test end-to-end
+  - [x] 17.1 Set up environment variables and configuration
     - Configure Supabase connection string
     - Add OpenAI API key for GPT-4o-mini
     - Set up LangChain/CrewAI configuration
     - _Requirements: All_
   
-  - [~] 17.2 Create startup script for background worker
+  - [x] 17.2 Create startup script for background worker
     - Run background worker as separate process
     - Schedule periodic scraping
     - _Requirements: 1.1_
   
-  - [~] 17.3 Test complete workflow manually
+  - [x] 17.3 Test complete workflow manually
     - Start background worker, verify jobs are scraped and scored
     - Open dashboard, verify jobs appear with scores
     - Click Proceed, verify automation launches
@@ -341,13 +341,13 @@ Each task builds on previous work, with property-based tests integrated close to
     - Test kill switch functionality
     - _Requirements: All_
   
-  - [~] 17.4 Write integration tests for critical flows
+  - [x] 17.4 Write integration tests for critical flows
     - Test job discovery → scoring → dashboard display flow
     - Test dashboard → automation → submission flow
     - Test kill switch interruption flow
     - _Requirements: All_
 
-- [~] 18. Final checkpoint - Ensure all tests pass
+- [x] 18. Final checkpoint - Ensure all tests pass
   - Run all unit tests, property tests, and integration tests
   - Verify test coverage meets goals (80%+ unit, all 22 properties)
   - Ensure all tests pass, ask the user if questions arise.
