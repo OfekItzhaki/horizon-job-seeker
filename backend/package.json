@@ -8,11 +8,13 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "test": "vitest",
+    "test:db": "vitest run src/db/schema.test.ts",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
     "db:generate": "drizzle-kit generate:pg",
     "db:migrate": "tsx src/db/migrate.ts",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "db:verify": "tsx src/db/verify-setup.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.3",
