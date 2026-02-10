@@ -2,7 +2,7 @@ import { describe, test, expect, beforeAll, afterAll, beforeEach } from 'vitest'
 import fc from 'fast-check';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import { jobs, jobStatusEnum, type NewJob } from './schema.js';
+import { jobs, type NewJob } from './schema.js';
 import { sql } from 'drizzle-orm';
 
 // Feature: job-search-agent, Property 16: Database Unique Constraint Enforcement
@@ -166,7 +166,7 @@ describe('Database Constraints Property Tests', () => {
               company,
               title,
               description,
-              status: invalidStatus as any, // Force invalid status
+              status: invalidStatus as 'new' | 'approved' | 'dismissed' | 'applied', // Force invalid status
             };
 
             // Should fail with constraint violation
@@ -242,7 +242,7 @@ describe('Database Constraints Property Tests', () => {
             // Attempt to update to invalid status should fail
             await expect(
               testDb.update(jobs)
-                .set({ status: invalidStatus as any })
+                .set({ status: invalidStatus as 'new' | 'approved' | 'dismissed' | 'applied' })
                 .where(sql`id = ${insertedJob.id}`)
             ).rejects.toThrow();
 

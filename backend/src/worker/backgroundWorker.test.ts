@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fc from 'fast-check';
 import { db } from '../db/index.js';
-import { jobs, userProfile } from '../db/schema.js';
+import { jobs } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 
 // Feature: job-search-agent, Property 3: New Job Insertion
@@ -92,7 +92,7 @@ describe('Property 20: Exponential Backoff on Rate Limiting', () => {
       // Simulate waiting
       await new Promise(resolve => setTimeout(resolve, 10)); // Small delay for test
       
-      const elapsed = Date.now() - startTime;
+      Date.now() - startTime;
       
       // In a real scenario, elapsed should be >= expectedDelay
       // For testing, we just verify the delay values are correct

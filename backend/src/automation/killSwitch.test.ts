@@ -120,7 +120,7 @@ describe('Property 15: Kill Switch Termination', () => {
       fc.property(
         fc.constant(null),
         () => {
-          const sessions: any[] = [];
+          const sessions: Array<{ id: string; status: string }> = [];
           
           // Activate kill switch with no sessions
           const terminated = sessions.length;

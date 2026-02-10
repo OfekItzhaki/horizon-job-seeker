@@ -88,10 +88,6 @@ describe('Property 13: Resume PDF Round Trip', () => {
       fc.property(
         fc.string({ minLength: 50, maxLength: 500 }),
         (resumeText) => {
-          // Simulate PDF generation with special characters
-          const specialChars = ['@', '#', '$', '%', '&', '*'];
-          const hasSpecialChar = specialChars.some(char => resumeText.includes(char));
-
           // PDF generation should not fail with special characters
           expect(() => {
             // Simulate PDF generation
@@ -125,7 +121,7 @@ describe('Property 14: Automation Pause Before Submission', () => {
           expect(status).toBe('paused');
           
           // Verify submit button was NOT clicked
-          let submitClicked = false;
+          const submitClicked = false;
           expect(submitClicked).toBe(false);
         }
       ),
@@ -165,9 +161,9 @@ describe('Property 14: Automation Pause Before Submission', () => {
     fc.assert(
       fc.property(
         fc.integer({ min: 0, max: 100 }), // time elapsed in seconds
-        (timeElapsed) => {
-          let status = 'paused';
-          let submitClicked = false;
+        (_timeElapsed) => {
+          const status = 'paused';
+          const submitClicked = false;
 
           // Time passing should not change status
           // (simulating waiting for user confirmation)

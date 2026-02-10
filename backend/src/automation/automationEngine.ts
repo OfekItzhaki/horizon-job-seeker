@@ -242,7 +242,7 @@ ${truncatedHtml}`;
           throw new Error('Invalid response format from LLM - missing fields array');
         }
         
-        const fields: FormField[] = parsed.fields.map((f: any) => ({
+        const fields: FormField[] = parsed.fields.map((f: { type: string; selector: string; fieldType: string; confidence: number }) => ({
           type: f.type,
           selector: f.selector,
           label: f.fieldType,
@@ -472,7 +472,7 @@ ${truncatedHtml}`;
           (button as HTMLElement).style.border = '3px solid red';
           (button as HTMLElement).style.boxShadow = '0 0 10px red';
         }
-      }, submitSelectors.find(s => submitButton) || submitSelectors[0]);
+      }, submitSelectors.find(_s => submitButton) || submitSelectors[0]);
 
       // Update session status to paused
       session.status = 'paused';

@@ -1,7 +1,6 @@
 import { db } from '../db/index.js';
 import { jobs, type NewJob } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
-import { generateCanonicalId } from '../utils/canonicalId.js';
 
 /**
  * Check if a job already exists in the database
@@ -10,8 +9,6 @@ import { generateCanonicalId } from '../utils/canonicalId.js';
  * @returns true if job exists, false otherwise
  */
 export async function checkDuplicate(company: string, title: string): Promise<boolean> {
-  const canonicalId = generateCanonicalId(company, title);
-  
   // Check by canonical ID logic (company + title combination)
   const existing = await db
     .select()

@@ -8,7 +8,6 @@
 
 import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
-import { jobs, userProfile } from './schema.js';
 import dotenv from 'dotenv';
 
 // Load environment variables
@@ -34,22 +33,23 @@ async function verifySetup() {
     sql = postgres(process.env.DATABASE_URL);
     await sql`SELECT 1`;
     console.log('   ✓ Database connection successful\n');
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('   ✗ Database connection failed');
-    console.error(`   Error: ${error.message}`);
+    console.error(`   Error: ${errorMessage}`);
     console.error('   Please check your DATABASE_URL and ensure the database is accessible\n');
     process.exit(1);
   }
 
   // Step 3: Check if tables exist
   console.log('3. Checking if required tables exist...');
-  const db = drizzle(sql);
+  drizzle(sql);
   
   try {
     // Try to query the jobs table
     await sql`SELECT COUNT(*) FROM jobs`;
     console.log('   ✓ jobs table exists');
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('   ✗ jobs table does not exist');
     console.error('   Please run migrations: npm run db:generate && npm run db:migrate\n');
     await sql.end();
@@ -60,7 +60,7 @@ async function verifySetup() {
     // Try to query the user_profile table
     await sql`SELECT COUNT(*) FROM user_profile`;
     console.log('   ✓ user_profile table exists\n');
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('   ✗ user_profile table does not exist');
     console.error('   Please run migrations: npm run db:generate && npm run db:migrate\n');
     await sql.end();
@@ -87,8 +87,9 @@ async function verifySetup() {
       console.error('   ✗ Unique constraint is NOT enforced (duplicate was inserted)');
       await sql.end();
       process.exit(1);
-    } catch (dupError: any) {
-      if (dupError.message.includes('unique') || dupError.code === '23505') {
+    } catch (dupError: unknown) {
+      const isDuplicateError = dupError instanceof Error && (dupError.message.includes('unique') || ('code' in dupError && dupError.code === '23505'));
+      if (isDuplicateError) {
         console.log('   ✓ Unique constraint is properly enforced');
       } else {
         throw dupError;
@@ -98,9 +99,10 @@ async function verifySetup() {
     // Clean up test data
     await sql`DELETE FROM jobs WHERE job_url = ${testUrl}`;
     console.log('');
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('   ✗ Error testing unique constraint');
-    console.error(`   Error: ${error.message}\n`);
+    console.error(`   Error: ${errorMessage}\n`);
     await sql.end();
     process.exit(1);
   }
@@ -119,17 +121,19 @@ async function verifySetup() {
       console.error('   ✗ ENUM constraint is NOT enforced (invalid status was accepted)');
       await sql.end();
       process.exit(1);
-    } catch (enumError: any) {
-      if (enumError.message.includes('invalid input value') || enumError.code === '22P02' || enumError.code === '23514') {
+    } catch (enumError: unknown) {
+      const isEnumError = enumError instanceof Error && (enumError.message.includes('invalid input value') || ('code' in enumError && (enumError.code === '22P02' || enumError.code === '23514')));
+      if (isEnumError) {
         console.log('   ✓ ENUM constraint is properly enforced');
       } else {
         throw enumError;
       }
     }
     console.log('');
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('   ✗ Error testing ENUM constraint');
-    console.error(`   Error: ${error.message}\n`);
+    console.error(`   Error: ${errorMessage}\n`);
     await sql.end();
     process.exit(1);
   }
