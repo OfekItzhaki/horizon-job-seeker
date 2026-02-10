@@ -24,19 +24,19 @@ Each task builds on previous work, with property-based tests integrated close to
   - Set up testing frameworks (Jest/Vitest, fast-check)
   - _Requirements: 8.6_
 
-- [ ] 2. Define database schema and migrations
-  - [ ] 2.1 Create Drizzle schema for jobs table
+- [-] 2. Define database schema and migrations
+  - [x] 2.1 Create Drizzle schema for jobs table
     - Define jobs table with all columns: id, job_url (unique), company, title, description, match_score, status (ENUM), created_at
     - Add unique constraint on job_url
     - Add ENUM constraint on status field
     - _Requirements: 8.1, 8.2, 8.3_
   
-  - [ ] 2.2 Create Drizzle schema for user_profile table
+  - [x] 2.2 Create Drizzle schema for user_profile table
     - Define user_profile table with columns: id, full_name, email, phone, github_url, resume_text, bio
     - Add email validation constraint
     - _Requirements: 3.1, 8.4_
   
-  - [ ] 2.3 Generate and run database migrations
+  - [x] 2.3 Generate and run database migrations
     - Create migration files from schema
     - Run migrations against Supabase PostgreSQL
     - _Requirements: 8.1, 8.4_
