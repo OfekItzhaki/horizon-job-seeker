@@ -65,29 +65,29 @@ Each task builds on previous work, with property-based tests integrated close to
     - **Property 2: Duplicate Prevention**
     - **Validates: Requirements 1.4**
 
-- [ ] 4. Build job scraper for LinkedIn and Indeed
-  - [ ] 4.1 Create base scraper class with Playwright
+- [-] 4. Build job scraper for LinkedIn and Indeed
+  - [x] 4.1 Create base scraper class with Playwright
     - Set up Playwright browser instance
     - Implement navigation and HTML extraction
     - Add User-Agent header to all requests
     - _Requirements: 1.1, 9.2_
   
-  - [ ] 4.2 Implement LinkedIn job scraper
+  - [x] 4.2 Implement LinkedIn job scraper
     - Parse LinkedIn job listing pages for "Full Stack Developer"
     - Extract job URL, company, title, description
     - _Requirements: 1.1, 1.2_
   
-  - [ ] 4.3 Implement Indeed job scraper
+  - [x] 4.3 Implement Indeed job scraper
     - Parse Indeed job listing pages for "Full Stack Developer"
     - Extract job URL, company, title, description
     - _Requirements: 1.1, 1.2_
   
-  - [ ] 4.4 Add rate limiting with 30-second delays
+  - [x] 4.4 Add rate limiting with 30-second delays
     - Implement delay mechanism between scrape requests
     - Track last request time per domain
     - _Requirements: 1.6, 9.1_
   
-  - [ ] 4.5 Implement robots.txt compliance
+  - [x] 4.5 Implement robots.txt compliance
     - Parse and respect robots.txt from target sites
     - Skip disallowed URLs
     - _Requirements: 9.3_
