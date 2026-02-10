@@ -33,9 +33,42 @@ export class AutomationEngine {
   private sessions: Map<string, AutomationSession> = new Map();
 
   /**
+   * Handle browser crash - reset job status and clean up
+   */
+  private async handleBrowserCrash(sessionId: string, jobId: number, error: Error): Promise<void> {
+    console.error(`Browser crashed for session ${sessionId}:`, error);
+    
+    try {
+      // Reset job status to 'approved' so user can retry
+      await db.update(jobs)
+        .set({ status: 'approved' })
+        .where(eq(jobs.id, jobId));
+      
+      console.log(`Reset job ${jobId} status to 'approved' after browser crash`);
+      
+      // Broadcast error
+      wsManager.broadcast({
+        type: 'automation_error',
+        automationId: sessionId,
+        jobId,
+        message: `Browser crashed: ${error.message}. Job status reset to 'approved' - you can retry.`,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (dbError) {
+      console.error('Error resetting job status after browser crash:', dbError);
+    }
+    
+    // Clean up session
+    this.sessions.delete(sessionId);
+  }
+
+  /**
    * Start a new automation session for a job
    */
   async startSession(jobId: number): Promise<AutomationSession> {
+    let browser: Browser | null = null;
+    let sessionId: string | null = null;
+    
     try {
       // Get job details
       const [job] = await db.select().from(jobs).where(eq(jobs.id, jobId)).limit(1);
@@ -50,15 +83,23 @@ export class AutomationEngine {
 
       // Launch browser in non-headless mode
       console.log(`Starting automation session for job ${jobId}`);
-      const browser = await chromium.launch({
-        headless: false, // User can see what's happening
-        slowMo: 100, // Slow down actions for visibility
-      });
+      
+      try {
+        browser = await chromium.launch({
+          headless: false, // User can see what's happening
+          slowMo: 100, // Slow down actions for visibility
+          timeout: 30000, // 30 second timeout for browser launch
+        });
+      } catch (error) {
+        const errorMsg = `Failed to launch browser: ${error instanceof Error ? error.message : 'Unknown error'}`;
+        console.error(errorMsg);
+        throw new Error(errorMsg);
+      }
 
       const page = await browser.newPage();
 
       // Create session
-      const sessionId = `auto-${jobId}-${Date.now()}`;
+      sessionId = `auto-${jobId}-${Date.now()}`;
       const session: AutomationSession = {
         id: sessionId,
         jobId,
@@ -79,13 +120,51 @@ export class AutomationEngine {
         timestamp: new Date().toISOString(),
       });
 
-      // Navigate to job URL
+      // Navigate to job URL with timeout and error handling
       console.log(`Navigating to ${job.jobUrl}`);
-      await page.goto(job.jobUrl, { waitUntil: 'networkidle' });
+      try {
+        await page.goto(job.jobUrl, { 
+          waitUntil: 'networkidle',
+          timeout: 30000 // 30 second timeout
+        });
+      } catch (error) {
+        const errorMsg = `Failed to navigate to job URL: ${error instanceof Error ? error.message : 'Unknown error'}`;
+        console.error(errorMsg);
+        
+        // Broadcast error
+        wsManager.broadcast({
+          type: 'automation_error',
+          automationId: sessionId,
+          jobId,
+          message: `Navigation failed: ${errorMsg}`,
+          timestamp: new Date().toISOString(),
+        });
+        
+        // Clean up
+        await browser.close();
+        this.sessions.delete(sessionId);
+        
+        throw new Error(errorMsg);
+      }
 
       return session;
     } catch (error) {
       console.error('Error starting automation session:', error);
+      
+      // Clean up browser if it was created
+      if (browser) {
+        try {
+          await browser.close();
+        } catch (closeError) {
+          console.error('Error closing browser during cleanup:', closeError);
+        }
+      }
+      
+      // Remove session if it was created
+      if (sessionId) {
+        this.sessions.delete(sessionId);
+      }
+      
       throw error;
     }
   }
@@ -93,7 +172,7 @@ export class AutomationEngine {
   /**
    * Identify form fields using LLM
    */
-  async identifyFormFields(page: Page): Promise<FormField[]> {
+  async identifyFormFields(page: Page, sessionId?: string, jobId?: number): Promise<FormField[]> {
     try {
       console.log('Identifying form fields...');
 
@@ -133,38 +212,62 @@ Return ONLY valid JSON in this exact format:
 HTML:
 ${truncatedHtml}`;
 
-      const response = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a form field detection expert. Return only valid JSON.',
-          },
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-        temperature: 0.1,
-        max_tokens: 1000,
-      });
+      try {
+        const response = await openai.chat.completions.create({
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a form field detection expert. Return only valid JSON.',
+            },
+            {
+              role: 'user',
+              content: prompt,
+            },
+          ],
+          temperature: 0.1,
+          max_tokens: 1000,
+          timeout: 30000, // 30 second timeout
+        });
 
-      const content = response.choices[0]?.message?.content?.trim();
-      if (!content) {
-        throw new Error('Empty response from LLM');
+        const content = response.choices[0]?.message?.content?.trim();
+        if (!content) {
+          throw new Error('Empty response from LLM');
+        }
+
+        // Parse JSON response
+        const parsed = JSON.parse(content);
+        
+        if (!parsed.fields || !Array.isArray(parsed.fields)) {
+          throw new Error('Invalid response format from LLM - missing fields array');
+        }
+        
+        const fields: FormField[] = parsed.fields.map((f: any) => ({
+          type: f.type,
+          selector: f.selector,
+          label: f.fieldType,
+          confidence: f.confidence,
+        }));
+
+        console.log(`Identified ${fields.length} form fields`);
+        return fields;
+      } catch (error) {
+        const errorMsg = `LLM field detection failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
+        console.error(errorMsg);
+        
+        // Broadcast error if session info provided
+        if (sessionId && jobId) {
+          wsManager.broadcast({
+            type: 'automation_error',
+            automationId: sessionId,
+            jobId,
+            message: `Failed to detect form fields. Please check the job application page manually.`,
+            timestamp: new Date().toISOString(),
+          });
+        }
+        
+        throw new Error(errorMsg);
       }
-
-      // Parse JSON response
-      const parsed = JSON.parse(content);
-      const fields: FormField[] = parsed.fields.map((f: any) => ({
-        type: f.type,
-        selector: f.selector,
-        label: f.fieldType,
-        confidence: f.confidence,
-      }));
-
-      console.log(`Identified ${fields.length} form fields`);
-      return fields;
     } catch (error) {
       console.error('Error identifying form fields:', error);
       throw error;

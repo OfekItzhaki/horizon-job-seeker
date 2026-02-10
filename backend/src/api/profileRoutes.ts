@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { db } from '../db/index.js';
-import { userProfile } from '../db/schema.js';
+import { userProfile, type StructuredProfileData } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
+import { parseResumeText, structuredDataToResumeText, extractDesiredJobTitles } from '../utils/resumeParser.js';
 
 const router = Router();
 
@@ -36,7 +37,14 @@ router.get('/', async (req, res) => {
       });
     }
 
-    res.json(profiles[0]);
+    // Parse structured data if it exists
+    const profile = profiles[0];
+    const responseProfile = {
+      ...profile,
+      structuredData: profile.structuredData ? JSON.parse(profile.structuredData) : null,
+    };
+
+    res.json(responseProfile);
   } catch (error) {
     console.error('Error fetching profile:', error);
     res.status(500).json({
@@ -57,7 +65,20 @@ router.get('/', async (req, res) => {
  */
 router.put('/', async (req, res) => {
   try {
-    const { fullName, email, phone, githubUrl, resumeText, bio } = req.body;
+    const { 
+      fullName, 
+      email, 
+      phone, 
+      githubUrl, 
+      linkedinUrl,
+      location,
+      resumeText, 
+      bio,
+      structuredData,
+      desiredJobTitles,
+      desiredLocations,
+      parseResume // Flag to trigger resume parsing
+    } = req.body;
 
     // Validate required fields
     if (!fullName || !email || !resumeText) {
@@ -95,6 +116,26 @@ router.put('/', async (req, res) => {
       });
     }
 
+    // Parse resume if requested
+    let parsedStructuredData: StructuredProfileData | null = null;
+    let autoDesiredJobTitles: string[] = [];
+    
+    if (parseResume && resumeText) {
+      try {
+        console.log('Parsing resume text...');
+        parsedStructuredData = await parseResumeText(resumeText);
+        autoDesiredJobTitles = extractDesiredJobTitles(parsedStructuredData);
+        console.log('Resume parsed successfully');
+      } catch (error) {
+        console.error('Error parsing resume:', error);
+        // Continue without parsed data - don't fail the request
+      }
+    }
+
+    // Use provided structured data or parsed data
+    const finalStructuredData = structuredData || parsedStructuredData;
+    const finalDesiredJobTitles = desiredJobTitles || autoDesiredJobTitles.join(', ');
+
     // Check if profile exists
     const existing = await db.select().from(userProfile).limit(1);
 
@@ -106,8 +147,14 @@ router.put('/', async (req, res) => {
         email,
         phone: phone || null,
         githubUrl: githubUrl || null,
+        linkedinUrl: linkedinUrl || null,
+        location: location || null,
         resumeText,
         bio: bio || null,
+        structuredData: finalStructuredData ? JSON.stringify(finalStructuredData) : null,
+        desiredJobTitles: finalDesiredJobTitles || null,
+        desiredLocations: desiredLocations || null,
+        updatedAt: new Date(),
       }).returning();
     } else {
       // Update existing profile
@@ -117,20 +164,74 @@ router.put('/', async (req, res) => {
           email,
           phone: phone || null,
           githubUrl: githubUrl || null,
+          linkedinUrl: linkedinUrl || null,
+          location: location || null,
           resumeText,
           bio: bio || null,
+          structuredData: finalStructuredData ? JSON.stringify(finalStructuredData) : null,
+          desiredJobTitles: finalDesiredJobTitles || null,
+          desiredLocations: desiredLocations || null,
+          updatedAt: new Date(),
         })
         .where(eq(userProfile.id, existing[0].id))
         .returning();
     }
 
-    res.json(profile);
+    // Parse structured data for response
+    const responseProfile = {
+      ...profile,
+      structuredData: profile.structuredData ? JSON.parse(profile.structuredData) : null,
+    };
+
+    res.json(responseProfile);
   } catch (error) {
     console.error('Error updating profile:', error);
     res.status(500).json({
       error: {
         code: 'DATABASE_ERROR',
         message: 'Failed to update user profile',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        retryable: true,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  }
+});
+
+/**
+ * POST /api/profile/parse-resume
+ * Parse resume text and return structured data
+ */
+router.post('/parse-resume', async (req, res) => {
+  try {
+    const { resumeText } = req.body;
+
+    if (!resumeText) {
+      return res.status(400).json({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Missing required field: resumeText',
+          retryable: false,
+          timestamp: new Date().toISOString(),
+        },
+      });
+    }
+
+    console.log('Parsing resume...');
+    const structuredData = await parseResumeText(resumeText);
+    const desiredJobTitles = extractDesiredJobTitles(structuredData);
+
+    res.json({
+      structuredData,
+      desiredJobTitles,
+      resumeText: structuredDataToResumeText(structuredData),
+    });
+  } catch (error) {
+    console.error('Error parsing resume:', error);
+    res.status(500).json({
+      error: {
+        code: 'PARSE_ERROR',
+        message: 'Failed to parse resume',
         details: error instanceof Error ? error.message : 'Unknown error',
         retryable: true,
         timestamp: new Date().toISOString(),

@@ -64,7 +64,7 @@ export abstract class BaseScraper {
   /**
    * Navigate to URL with rate limiting and exponential backoff for 429 responses
    */
-  protected async navigateWithRateLimit(url: string): Promise<void> {
+  protected async navigateWithRateLimit(url: string, retries = 3): Promise<void> {
     if (!this.page) {
       throw new Error('Browser not initialized. Call init() first.');
     }
@@ -78,7 +78,10 @@ export abstract class BaseScraper {
 
     while (attempt <= backoffDelays.length) {
       try {
-        const response = await this.page.goto(url, { waitUntil: 'networkidle' });
+        const response = await this.page.goto(url, { 
+          waitUntil: 'networkidle',
+          timeout: 30000 // 30 second timeout
+        });
         
         // Check for rate limiting
         if (response && response.status() === 429) {
@@ -98,7 +101,23 @@ export abstract class BaseScraper {
         // Success - exit loop
         return;
       } catch (error) {
-        // If it's not a 429 error, rethrow
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        
+        // Handle network errors with retry
+        if (errorMessage.includes('timeout') || errorMessage.includes('net::ERR') || errorMessage.includes('Navigation failed')) {
+          if (retries > 0) {
+            console.log(`Network error: ${errorMessage}. Retrying... (${retries} attempts left)`);
+            console.log(`[LOG] Network error for ${domain} at ${new Date().toISOString()}: ${errorMessage}`);
+            await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5s before retry
+            return this.navigateWithRateLimit(url, retries - 1);
+          } else {
+            console.error(`Network error after all retries: ${errorMessage}`);
+            console.log(`[LOG] Network error exhausted retries for ${domain} at ${new Date().toISOString()}`);
+            throw new Error(`Navigation failed after ${3 - retries + 1} attempts: ${errorMessage}`);
+          }
+        }
+        
+        // If it's not a 429 error or network error, rethrow
         if (attempt === 0) {
           throw error;
         }
