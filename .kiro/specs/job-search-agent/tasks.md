@@ -46,8 +46,8 @@ Each task builds on previous work, with property-based tests integrated close to
     - **Property 17: Status ENUM Constraint Enforcement**
     - **Validates: Requirements 8.2, 8.3**
 
-- [ ] 3. Implement canonical ID generation and deduplication
-  - [ ] 3.1 Create canonical ID generator utility
+- [-] 3. Implement canonical ID generation and deduplication
+  - [x] 3.1 Create canonical ID generator utility
     - Write generateCanonicalId function that slugifies company + title
     - Handle special characters, spaces, and case normalization
     - _Requirements: 1.3_
@@ -56,7 +56,7 @@ Each task builds on previous work, with property-based tests integrated close to
     - **Property 1: Canonical ID Determinism**
     - **Validates: Requirements 1.3**
   
-  - [ ] 3.3 Implement duplicate detection logic
+  - [x] 3.3 Implement duplicate detection logic
     - Write checkDuplicate function that queries database by canonical ID
     - Return boolean indicating if job already exists
     - _Requirements: 1.4_
