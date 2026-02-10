@@ -1,16 +1,32 @@
+// Load environment variables FIRST before any other imports
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+// Get the directory name of the current module
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Load .env from backend directory
+dotenv.config({ path: join(__dirname, '../.env') });
+
+// Now import everything else
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import { createServer } from 'http';
 import profileRoutes from './api/profileRoutes.js';
 import jobRoutes from './api/jobRoutes.js';
 import automationRoutes from './api/automationRoutes.js';
 import { wsManager } from './websocket/websocketServer.js';
 
-dotenv.config();
-
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Debug: Log environment variables
+console.log('Environment check:');
+console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'Set' : 'NOT SET');
+console.log('OPENAI_API_KEY:', process.env.OPENAI_API_KEY ? 'Set' : 'NOT SET');
+console.log('PORT:', process.env.PORT);
 
 app.use(cors());
 app.use(express.json());
