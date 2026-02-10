@@ -4,14 +4,42 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
+interface WorkExperience {
+  title: string;
+  company: string;
+  duration: string;
+  responsibilities: string[];
+  achievements: string[];
+}
+
+interface Education {
+  degree: string;
+  institution: string;
+  year: string;
+  details?: string;
+}
+
+interface StructuredProfileData {
+  workExperience: WorkExperience[];
+  skills: string[];
+  education: Education[];
+  certifications?: string[];
+  languages?: string[];
+}
+
 interface UserProfile {
   id?: number;
   fullName: string;
   email: string;
   phone?: string;
   githubUrl?: string;
+  linkedinUrl?: string;
+  location?: string;
   resumeText: string;
   bio?: string;
+  structuredData?: StructuredProfileData | null;
+  desiredJobTitles?: string;
+  desiredLocations?: string;
 }
 
 export default function ProfilePage() {
@@ -21,12 +49,19 @@ export default function ProfilePage() {
     email: '',
     phone: '',
     githubUrl: '',
+    linkedinUrl: '',
+    location: '',
     resumeText: '',
     bio: '',
+    desiredJobTitles: '',
+    desiredLocations: '',
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [parsing, setParsing] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [inputMethod, setInputMethod] = useState<'resume' | 'manual'>('resume');
+  const [showStructuredData, setShowStructuredData] = useState(false);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -42,11 +77,51 @@ export default function ProfilePage() {
       if (response.ok) {
         const data = await response.json();
         setProfile(data);
+        if (data.structuredData) {
+          setShowStructuredData(true);
+        }
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleParseResume = async () => {
+    if (!profile.resumeText) {
+      setMessage({ type: 'error', text: 'Please paste your resume first' });
+      return;
+    }
+
+    try {
+      setParsing(true);
+      setMessage(null);
+
+      const response = await fetch(`${API_URL}/api/profile/parse-resume`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resumeText: profile.resumeText }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setProfile({
+          ...profile,
+          structuredData: data.structuredData,
+          desiredJobTitles: data.desiredJobTitles.join(', '),
+        });
+        setShowStructuredData(true);
+        setMessage({ type: 'success', text: 'Resume parsed successfully! Review the extracted data below.' });
+      } else {
+        const error = await response.json();
+        setMessage({ type: 'error', text: error.error?.message || 'Failed to parse resume' });
+      }
+    } catch (error) {
+      console.error('Error parsing resume:', error);
+      setMessage({ type: 'error', text: 'Failed to parse resume' });
+    } finally {
+      setParsing(false);
     }
   };
 
@@ -137,92 +212,264 @@ export default function ProfilePage() {
             </div>
           )}
 
+          {/* Input Method Selection */}
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <h3 className="text-sm font-medium text-blue-900 mb-3">Choose Input Method:</h3>
+            <div className="flex gap-4">
+              <button
+                type="button"
+                onClick={() => setInputMethod('resume')}
+                className={`flex-1 px-4 py-3 rounded-lg border-2 transition ${
+                  inputMethod === 'resume'
+                    ? 'border-blue-600 bg-blue-100 text-blue-900'
+                    : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400'
+                }`}
+              >
+                <div className="font-medium">📄 Paste Resume (Quick)</div>
+                <div className="text-xs mt-1">AI will extract your data automatically</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setInputMethod('manual')}
+                className={`flex-1 px-4 py-3 rounded-lg border-2 transition ${
+                  inputMethod === 'manual'
+                    ? 'border-blue-600 bg-blue-100 text-blue-900'
+                    : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400'
+                }`}
+              >
+                <div className="font-medium">✍️ Enter Manually</div>
+                <div className="text-xs mt-1">Fill in structured form fields</div>
+              </button>
+            </div>
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Full Name */}
-            <div>
-              <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
-                Full Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                id="fullName"
-                required
-                value={profile.fullName}
-                onChange={(e) => setProfile({ ...profile, fullName: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="John Doe"
-              />
+            {/* Basic Information */}
+            <div className="space-y-4">
+              <h2 className="text-lg font-semibold text-gray-900 border-b pb-2">Basic Information</h2>
+              
+              {/* Full Name */}
+              <div>
+                <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
+                  Full Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="fullName"
+                  required
+                  value={profile.fullName}
+                  onChange={(e) => setProfile({ ...profile, fullName: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="John Doe"
+                />
+              </div>
+
+              {/* Email */}
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                  Email <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  required
+                  value={profile.email}
+                  onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="john.doe@example.com"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {/* Phone */}
+                <div>
+                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+                    Phone
+                  </label>
+                  <input
+                    type="tel"
+                    id="phone"
+                    value={profile.phone || ''}
+                    onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="+1234567890"
+                  />
+                </div>
+
+                {/* Location */}
+                <div>
+                  <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-2">
+                    Location
+                  </label>
+                  <input
+                    type="text"
+                    id="location"
+                    value={profile.location || ''}
+                    onChange={(e) => setProfile({ ...profile, location: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="San Francisco, CA"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {/* GitHub URL */}
+                <div>
+                  <label htmlFor="githubUrl" className="block text-sm font-medium text-gray-700 mb-2">
+                    GitHub URL
+                  </label>
+                  <input
+                    type="url"
+                    id="githubUrl"
+                    value={profile.githubUrl || ''}
+                    onChange={(e) => setProfile({ ...profile, githubUrl: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="https://github.com/username"
+                  />
+                </div>
+
+                {/* LinkedIn URL */}
+                <div>
+                  <label htmlFor="linkedinUrl" className="block text-sm font-medium text-gray-700 mb-2">
+                    LinkedIn URL
+                  </label>
+                  <input
+                    type="url"
+                    id="linkedinUrl"
+                    value={profile.linkedinUrl || ''}
+                    onChange={(e) => setProfile({ ...profile, linkedinUrl: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="https://linkedin.com/in/username"
+                  />
+                </div>
+              </div>
             </div>
 
-            {/* Email */}
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Email <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="email"
-                id="email"
-                required
-                value={profile.email}
-                onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="john.doe@example.com"
-              />
-            </div>
+            {/* Resume Section */}
+            {inputMethod === 'resume' && (
+              <div className="space-y-4">
+                <h2 className="text-lg font-semibold text-gray-900 border-b pb-2">Resume</h2>
+                
+                <div>
+                  <label htmlFor="resumeText" className="block text-sm font-medium text-gray-700 mb-2">
+                    Paste Your Resume <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    id="resumeText"
+                    required
+                    rows={12}
+                    value={profile.resumeText}
+                    onChange={(e) => setProfile({ ...profile, resumeText: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
+                    placeholder="Paste your resume text here..."
+                  />
+                  <div className="flex justify-between items-center mt-2">
+                    <p className="text-sm text-gray-500">
+                      {profile.resumeText.length} / 50,000 characters
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleParseResume}
+                      disabled={parsing || !profile.resumeText}
+                      className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {parsing ? (
+                        <>
+                          <span className="inline-block animate-spin mr-2">⚙️</span>
+                          Parsing...
+                        </>
+                      ) : (
+                        '🤖 Parse Resume with AI'
+                      )}
+                    </button>
+                  </div>
+                </div>
 
-            {/* Phone */}
-            <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-                Phone
-              </label>
-              <input
-                type="tel"
-                id="phone"
-                value={profile.phone || ''}
-                onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="+1234567890"
-              />
-            </div>
+                {/* Show Parsed Data */}
+                {showStructuredData && profile.structuredData && (
+                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <h3 className="font-medium text-green-900 mb-2">✓ Extracted Data:</h3>
+                    <div className="text-sm text-green-800 space-y-1">
+                      <p>• Work Experience: {profile.structuredData.workExperience?.length || 0} positions</p>
+                      <p>• Skills: {profile.structuredData.skills?.length || 0} skills</p>
+                      <p>• Education: {profile.structuredData.education?.length || 0} degrees</p>
+                      {profile.structuredData.certifications && profile.structuredData.certifications.length > 0 && (
+                        <p>• Certifications: {profile.structuredData.certifications.length}</p>
+                      )}
+                      {profile.desiredJobTitles && (
+                        <p>• Suggested Job Titles: {profile.desiredJobTitles}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
-            {/* GitHub URL */}
-            <div>
-              <label htmlFor="githubUrl" className="block text-sm font-medium text-gray-700 mb-2">
-                GitHub URL
-              </label>
-              <input
-                type="url"
-                id="githubUrl"
-                value={profile.githubUrl || ''}
-                onChange={(e) => setProfile({ ...profile, githubUrl: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="https://github.com/yourusername"
-              />
-            </div>
+            {/* Manual Input - Simplified for now */}
+            {inputMethod === 'manual' && (
+              <div className="space-y-4">
+                <h2 className="text-lg font-semibold text-gray-900 border-b pb-2">Resume Details</h2>
+                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-sm text-yellow-800">
+                    💡 Tip: For now, paste your resume and use the AI parser. Full manual entry coming soon!
+                  </p>
+                </div>
+                <div>
+                  <label htmlFor="resumeTextManual" className="block text-sm font-medium text-gray-700 mb-2">
+                    Resume Text <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    id="resumeTextManual"
+                    required
+                    rows={10}
+                    value={profile.resumeText}
+                    onChange={(e) => setProfile({ ...profile, resumeText: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
+                    placeholder="Enter your resume text..."
+                  />
+                </div>
+              </div>
+            )}
 
-            {/* Resume Text */}
-            <div>
-              <label htmlFor="resumeText" className="block text-sm font-medium text-gray-700 mb-2">
-                Resume <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                id="resumeText"
-                required
-                rows={10}
-                value={profile.resumeText}
-                onChange={(e) => setProfile({ ...profile, resumeText: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
-                placeholder="Paste your resume text here..."
-              />
-              <p className="mt-2 text-sm text-gray-500">
-                {profile.resumeText.length} / 50,000 characters
-              </p>
+            {/* Job Preferences */}
+            <div className="space-y-4">
+              <h2 className="text-lg font-semibold text-gray-900 border-b pb-2">Job Preferences</h2>
+              
+              <div>
+                <label htmlFor="desiredJobTitles" className="block text-sm font-medium text-gray-700 mb-2">
+                  Desired Job Titles
+                </label>
+                <input
+                  type="text"
+                  id="desiredJobTitles"
+                  value={profile.desiredJobTitles || ''}
+                  onChange={(e) => setProfile({ ...profile, desiredJobTitles: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Senior Developer, Lead Engineer, Tech Lead"
+                />
+                <p className="mt-1 text-xs text-gray-500">Comma-separated list of job titles you're interested in</p>
+              </div>
+
+              <div>
+                <label htmlFor="desiredLocations" className="block text-sm font-medium text-gray-700 mb-2">
+                  Desired Locations
+                </label>
+                <input
+                  type="text"
+                  id="desiredLocations"
+                  value={profile.desiredLocations || ''}
+                  onChange={(e) => setProfile({ ...profile, desiredLocations: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="San Francisco, Remote, New York"
+                />
+                <p className="mt-1 text-xs text-gray-500">Comma-separated list of preferred work locations</p>
+              </div>
             </div>
 
             {/* Bio */}
             <div>
               <label htmlFor="bio" className="block text-sm font-medium text-gray-700 mb-2">
-                Bio
+                Professional Summary
               </label>
               <textarea
                 id="bio"
@@ -230,12 +477,12 @@ export default function ProfilePage() {
                 value={profile.bio || ''}
                 onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="A short bio about yourself..."
+                placeholder="A brief professional summary..."
               />
             </div>
 
             {/* Submit Button */}
-            <div className="flex gap-4">
+            <div className="flex gap-4 pt-4">
               <button
                 type="submit"
                 disabled={saving}
