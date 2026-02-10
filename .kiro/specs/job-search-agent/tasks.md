@@ -16,7 +16,7 @@ Each task builds on previous work, with property-based tests integrated close to
 
 ## Tasks
 
-- [ ] 1. Initialize project structure and dependencies
+- [x] 1. Initialize project structure and dependencies
   - Create Next.js project with TypeScript, Tailwind CSS, and ShadcnUI
   - Set up Node.js backend workspace with TypeScript
   - Install dependencies: Drizzle ORM, Playwright, fast-check, LangChain
@@ -41,7 +41,7 @@ Each task builds on previous work, with property-based tests integrated close to
     - Run migrations against Supabase PostgreSQL
     - _Requirements: 8.1, 8.4_
   
-  - [ ]* 2.4 Write property test for database constraints
+  - [ ] 2.4 Write property test for database constraints
     - **Property 16: Database Unique Constraint Enforcement**
     - **Property 17: Status ENUM Constraint Enforcement**
     - **Validates: Requirements 8.2, 8.3**
@@ -52,7 +52,7 @@ Each task builds on previous work, with property-based tests integrated close to
     - Handle special characters, spaces, and case normalization
     - _Requirements: 1.3_
   
-  - [ ]* 3.2 Write property tests for canonical ID
+  - [ ] 3.2 Write property tests for canonical ID
     - **Property 1: Canonical ID Determinism**
     - **Validates: Requirements 1.3**
   
@@ -61,7 +61,7 @@ Each task builds on previous work, with property-based tests integrated close to
     - Return boolean indicating if job already exists
     - _Requirements: 1.4_
   
-  - [ ]* 3.4 Write property test for duplicate prevention
+  - [ ] 3.4 Write property test for duplicate prevention
     - **Property 2: Duplicate Prevention**
     - **Validates: Requirements 1.4**
 
@@ -92,7 +92,7 @@ Each task builds on previous work, with property-based tests integrated close to
     - Skip disallowed URLs
     - _Requirements: 9.3_
   
-  - [ ]* 4.6 Write property tests for scraper
+  - [ ] 4.6 Write property tests for scraper
     - **Property 4: Scrape Rate Limiting**
     - **Property 5: Job Data Extraction Completeness**
     - **Property 18: User-Agent Header Presence**
@@ -112,11 +112,11 @@ Each task builds on previous work, with property-based tests integrated close to
     - Implement retry logic with exponential backoff
     - _Requirements: 2.5, 10.2_
   
-  - [ ]* 5.3 Write property tests for scoring
+  - [ ] 5.3 Write property tests for scoring
     - **Property 6: Match Score Range Validation**
     - **Validates: Requirements 2.3**
   
-  - [ ]* 5.4 Write unit tests for scoring error handling
+  - [ ] 5.4 Write unit tests for scoring error handling
     - Test API timeout scenarios
     - Test invalid response handling
     - Test null match_score on failure
@@ -142,7 +142,7 @@ Each task builds on previous work, with property-based tests integrated close to
     - Log rate limit encounters
     - _Requirements: 9.4, 9.5_
   
-  - [ ]* 6.4 Write property tests for worker
+  - [ ] 6.4 Write property tests for worker
     - **Property 3: New Job Insertion**
     - **Property 20: Exponential Backoff on Rate Limiting**
     - **Property 22: Event Logging Completeness**
@@ -158,12 +158,12 @@ Each task builds on previous work, with property-based tests integrated close to
     - Add email format validation
     - _Requirements: 3.1, 3.2, 3.3_
   
-  - [ ]* 8.2 Write property tests for profile management
+  - [ ] 8.2 Write property tests for profile management
     - **Property 7: Profile Update Round Trip**
     - **Property 8: Email Validation**
     - **Validates: Requirements 3.2, 3.3**
   
-  - [ ]* 8.3 Write unit tests for profile edge cases
+  - [ ] 8.3 Write unit tests for profile edge cases
     - Test resume text at 50,000 characters
     - Test invalid email formats
     - _Requirements: 3.2, 3.4_
@@ -181,7 +181,7 @@ Each task builds on previous work, with property-based tests integrated close to
     - Validate status transitions
     - _Requirements: 4.3, 4.4_
   
-  - [ ]* 9.3 Write property tests for job API
+  - [ ] 9.3 Write property tests for job API
     - **Property 9: Dashboard Job Filtering and Sorting**
     - **Property 11: Job Status State Machine**
     - **Validates: Requirements 4.1, 4.3, 4.4, 6.3, 6.4**
@@ -212,7 +212,7 @@ Each task builds on previous work, with property-based tests integrated close to
     - Notify user via API/WebSocket
     - _Requirements: 5.9, 5.10, 6.1_
   
-  - [ ]* 10.5 Write property tests for automation
+  - [ ] 10.5 Write property tests for automation
     - **Property 12: Form Field Filling Correctness**
     - **Property 13: Resume PDF Round Trip**
     - **Property 14: Automation Pause Before Submission**
@@ -235,7 +235,7 @@ Each task builds on previous work, with property-based tests integrated close to
     - Add assertion/guard in code
     - _Requirements: 6.5_
   
-  - [ ]* 11.4 Write property test for submission safety
+  - [ ] 11.4 Write property test for submission safety
     - **Property 14: Automation Pause Before Submission** (already covered in 10.5)
     - **Validates: Requirements 6.5**
 
@@ -247,7 +247,7 @@ Each task builds on previous work, with property-based tests integrated close to
     - Log kill switch activation with timestamp
     - _Requirements: 7.2, 7.3, 7.4_
   
-  - [ ]* 12.2 Write property test for kill switch
+  - [ ] 12.2 Write property test for kill switch
     - **Property 15: Kill Switch Termination**
     - **Property 22: Event Logging Completeness** (already covered in 6.4)
     - **Validates: Requirements 7.2, 7.3, 7.4**
@@ -274,7 +274,7 @@ Each task builds on previous work, with property-based tests integrated close to
     - Add email validation feedback
     - _Requirements: 3.1, 3.2, 3.3_
   
-  - [ ]* 14.4 Write property test for job card rendering
+  - [ ] 14.4 Write property test for job card rendering
     - **Property 10: Job Card Rendering Completeness**
     - **Validates: Requirements 4.2**
 
@@ -296,7 +296,7 @@ Each task builds on previous work, with property-based tests integrated close to
     - Show confirmation message after activation
     - _Requirements: 7.1, 7.5_
   
-  - [ ]* 15.4 Write property test for kill switch UI
+  - [ ] 15.4 Write property test for kill switch UI
     - **Property 15: Kill Switch Termination** (already covered in 12.2)
     - **Validates: Requirements 7.1, 7.5**
 
@@ -316,7 +316,7 @@ Each task builds on previous work, with property-based tests integrated close to
     - Show actionable error messages
     - _Requirements: 10.5_
   
-  - [ ]* 16.4 Write property test for error resilience
+  - [ ] 16.4 Write property test for error resilience
     - **Property 21: Error Resilience and Continuation**
     - **Validates: Requirements 10.1, 10.2, 10.3, 10.4**
 
@@ -341,7 +341,7 @@ Each task builds on previous work, with property-based tests integrated close to
     - Test kill switch functionality
     - _Requirements: All_
   
-  - [ ]* 17.4 Write integration tests for critical flows
+  - [ ] 17.4 Write integration tests for critical flows
     - Test job discovery → scoring → dashboard display flow
     - Test dashboard → automation → submission flow
     - Test kill switch interruption flow
