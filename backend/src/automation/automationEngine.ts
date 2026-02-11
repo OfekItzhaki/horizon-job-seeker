@@ -438,7 +438,7 @@ ${truncatedHtml}`;
       // Highlight the submit button for user visibility
       await session.page.evaluate(
         (selector: string) => {
-          const doc = (globalThis as any).document;
+          const doc = window.document;
           if (!doc) return;
           const button = doc.querySelector(selector);
           if (button && button.style) {
