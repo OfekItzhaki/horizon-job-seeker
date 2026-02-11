@@ -15,6 +15,13 @@
       "when": 1770748074540,
       "tag": "0001_illegal_nehzno",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1770802202501,
+      "tag": "0002_friendly_iron_fist",
+      "breakpoints": true
     }
   ]
 }

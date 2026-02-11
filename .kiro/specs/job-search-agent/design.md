@@ -109,6 +109,9 @@ export const userProfile = pgTable('user_profile', {
   githubUrl: text('github_url'),
   resumeText: text('resume_text').notNull(),
   bio: text('bio'),
+  desiredRoles: text('desired_roles'), // e.g., "Full Stack Developer, React Engineer"
+  excludedKeywords: text('excluded_keywords'), // e.g., "military, defense, government"
+  preferredTechnologies: text('preferred_technologies'), // e.g., "React, Node.js, TypeScript"
 });
 ```
 
@@ -163,7 +166,7 @@ interface Job {
 ```typescript
 interface ScraperConfig {
   sources: ('linkedin' | 'indeed')[];
-  searchQuery: string;
+  searchQueries: string[]; // Multiple personalized queries
   delayBetweenRequests: number; // milliseconds
   maxJobsPerRun: number;
 }
@@ -175,13 +178,56 @@ interface ScrapedJob {
   description: string;
 }
 
+interface JobTitleGenerationResult {
+  jobTitles: string[]; // 1-3 personalized job titles
+  reasoning: string; // Why these titles were chosen
+  technologies: string[]; // Key technologies extracted
+}
+
 class BackgroundWorker {
+  async generatePersonalizedJobTitles(
+    resumeText: string,
+    desiredRoles?: string,
+    excludedKeywords?: string,
+    preferredTechnologies?: string
+  ): Promise<JobTitleGenerationResult>;
   async scrapeJobs(config: ScraperConfig): Promise<ScrapedJob[]>;
   async generateCanonicalId(company: string, title: string): Promise<string>;
   async checkDuplicate(canonicalId: string): Promise<boolean>;
   async scoreJob(jobDescription: string, resumeText: string): Promise<number>;
   async storeJob(job: ScrapedJob, score: number): Promise<void>;
 }
+```
+
+### LLM Prompt for Job Title Generation
+
+```typescript
+const JOB_TITLE_GENERATION_PROMPT = `
+You are a career advisor analyzing a resume to generate personalized job search queries.
+
+Resume:
+{resumeText}
+
+User's Desired Roles (if specified): {desiredRoles}
+User's Excluded Keywords: {excludedKeywords}
+User's Preferred Technologies: {preferredTechnologies}
+
+Instructions:
+1. If desired_roles are specified, use those as the primary job titles
+2. Otherwise, analyze the resume focusing on the MOST RECENT 2-3 years of experience
+3. Identify the user's current career focus and key technologies
+4. Generate 1-3 job titles that match their current skills and career trajectory
+5. EXCLUDE any roles related to: {excludedKeywords}
+6. PRIORITIZE roles that use: {preferredTechnologies}
+7. Ignore outdated experience (e.g., if they have military experience from 5+ years ago but recent tech experience, focus on tech roles)
+
+Return JSON format:
+{
+  "jobTitles": ["Senior React Developer", "Full Stack Engineer"],
+  "reasoning": "Based on 3 years of React and Node.js experience in recent roles",
+  "technologies": ["React", "Node.js", "TypeScript", "PostgreSQL"]
+}
+`;
 ```
 
 ### Automation Engine Interface
@@ -298,6 +344,9 @@ interface UserProfile {
   githubUrl?: string;
   resumeText: string; // Plain text or markdown
   bio?: string;
+  desiredRoles?: string; // Comma-separated: "Full Stack Developer, React Engineer"
+  excludedKeywords?: string; // Comma-separated: "military, defense, government"
+  preferredTechnologies?: string; // Comma-separated: "React, Node.js, TypeScript"
 }
 
 // Resume PDF generation

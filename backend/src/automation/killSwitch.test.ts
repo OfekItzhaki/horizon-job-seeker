@@ -15,15 +15,15 @@ describe('Property 15: Kill Switch Termination', () => {
         ),
         (sessions) => {
           // Simulate active sessions
-          const activeSessions = sessions.filter(s => 
-            s.status === 'filling' || s.status === 'paused'
+          const activeSessions = sessions.filter(
+            (s) => s.status === 'filling' || s.status === 'paused'
           );
 
           // Activate kill switch
           let terminatedCount = 0;
           const remainingSessions: typeof sessions = [];
 
-          activeSessions.forEach(session => {
+          activeSessions.forEach((session) => {
             // Simulate closing browser
             session.status = 'cancelled';
             terminatedCount++;
@@ -31,10 +31,10 @@ describe('Property 15: Kill Switch Termination', () => {
 
           // Verify all active sessions were terminated
           expect(terminatedCount).toBe(activeSessions.length);
-          
+
           // Verify no active sessions remain
-          const stillActive = remainingSessions.filter(s => 
-            s.status === 'filling' || s.status === 'paused'
+          const stillActive = remainingSessions.filter(
+            (s) => s.status === 'filling' || s.status === 'paused'
           );
           expect(stillActive).toHaveLength(0);
         }
@@ -45,90 +45,78 @@ describe('Property 15: Kill Switch Termination', () => {
 
   it('should set all sessions to cancelled or terminated status', () => {
     fc.assert(
-      fc.property(
-        fc.integer({ min: 0, max: 10 }),
-        (sessionCount) => {
-          // Create sessions
-          const sessions = Array.from({ length: sessionCount }, (_, i) => ({
-            id: `session-${i}`,
-            status: 'paused' as const,
-          }));
+      fc.property(fc.integer({ min: 0, max: 10 }), (sessionCount) => {
+        // Create sessions
+        const sessions = Array.from({ length: sessionCount }, (_, i) => ({
+          id: `session-${i}`,
+          status: 'paused' as 'paused' | 'cancelled',
+        }));
 
-          // Activate kill switch
-          sessions.forEach(session => {
-            session.status = 'cancelled' as const;
-          });
+        // Activate kill switch
+        sessions.forEach((session) => {
+          session.status = 'cancelled';
+        });
 
-          // Verify all sessions are cancelled
-          sessions.forEach(session => {
-            expect(session.status).toBe('cancelled');
-          });
-        }
-      ),
+        // Verify all sessions are cancelled
+        sessions.forEach((session) => {
+          expect(session.status).toBe('cancelled');
+        });
+      }),
       { numRuns: 100 }
     );
   });
 
   it('should return count of terminated sessions', () => {
     fc.assert(
-      fc.property(
-        fc.integer({ min: 0, max: 10 }),
-        (sessionCount) => {
-          // Simulate kill switch activation
-          const terminated = sessionCount;
+      fc.property(fc.integer({ min: 0, max: 10 }), (sessionCount) => {
+        // Simulate kill switch activation
+        const terminated = sessionCount;
 
-          // Verify count matches
-          expect(terminated).toBe(sessionCount);
-          expect(terminated).toBeGreaterThanOrEqual(0);
-          expect(terminated).toBeLessThanOrEqual(10);
-        }
-      ),
+        // Verify count matches
+        expect(terminated).toBe(sessionCount);
+        expect(terminated).toBeGreaterThanOrEqual(0);
+        expect(terminated).toBeLessThanOrEqual(10);
+      }),
       { numRuns: 100 }
     );
   });
 
   it('should log kill switch activation with timestamp', () => {
     fc.assert(
-      fc.property(
-        fc.integer({ min: 0, max: 10 }),
-        (sessionCount) => {
-          const timestamp = new Date().toISOString();
-          
-          // Simulate kill switch log
-          const logEntry = {
-            event: 'kill_switch_activated',
-            sessionsTerminated: sessionCount,
-            timestamp,
-          };
+      fc.property(fc.integer({ min: 0, max: 10 }), (sessionCount) => {
+        const timestamp = new Date().toISOString();
 
-          // Verify log entry
-          expect(logEntry.event).toBe('kill_switch_activated');
-          expect(logEntry.sessionsTerminated).toBe(sessionCount);
-          expect(logEntry.timestamp).toBeDefined();
-          
-          // Verify timestamp is valid
-          const logTime = new Date(logEntry.timestamp).getTime();
-          expect(logTime).toBeLessThanOrEqual(Date.now());
-        }
-      ),
+        // Simulate kill switch log
+        const logEntry = {
+          event: 'kill_switch_activated',
+          sessionsTerminated: sessionCount,
+          timestamp,
+        };
+
+        // Verify log entry
+        expect(logEntry.event).toBe('kill_switch_activated');
+        expect(logEntry.sessionsTerminated).toBe(sessionCount);
+        expect(logEntry.timestamp).toBeDefined();
+
+        // Verify timestamp is valid
+        const logTime = new Date(logEntry.timestamp).getTime();
+        expect(logTime).toBeLessThanOrEqual(Date.now());
+      }),
       { numRuns: 100 }
     );
   });
 
   it('should handle kill switch with no active sessions', () => {
     fc.assert(
-      fc.property(
-        fc.constant(null),
-        () => {
-          const sessions: Array<{ id: string; status: string }> = [];
-          
-          // Activate kill switch with no sessions
-          const terminated = sessions.length;
+      fc.property(fc.constant(null), () => {
+        const sessions: Array<{ id: string; status: string }> = [];
 
-          // Should succeed with 0 terminations
-          expect(terminated).toBe(0);
-        }
-      ),
+        // Activate kill switch with no sessions
+        const terminated = sessions.length;
+
+        // Should succeed with 0 terminations
+        expect(terminated).toBe(0);
+      }),
       { numRuns: 100 }
     );
   });

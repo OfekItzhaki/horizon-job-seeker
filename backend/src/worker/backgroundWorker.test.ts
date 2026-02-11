@@ -28,14 +28,17 @@ describe('Property 3: New Job Insertion', () => {
           const uniqueUrl = `${url}?test=${Date.now()}-${Math.random()}`;
 
           // Insert job
-          const [inserted] = await db.insert(jobs).values({
-            jobUrl: uniqueUrl,
-            company,
-            title,
-            description,
-            matchScore: null,
-            status: 'new',
-          }).returning();
+          const [inserted] = await db
+            .insert(jobs)
+            .values({
+              jobUrl: uniqueUrl,
+              company,
+              title,
+              description,
+              matchScore: null,
+              status: 'new',
+            })
+            .returning();
 
           // Verify exactly one record was created
           const allJobs = await db.select().from(jobs).where(eq(jobs.jobUrl, uniqueUrl));
@@ -84,16 +87,16 @@ describe('Property 20: Exponential Backoff on Rate Limiting', () => {
 
   it('should wait at least the specified delay between retry attempts', async () => {
     const delays = [60000, 120000, 240000];
-    
+
     for (let i = 0; i < delays.length; i++) {
       const expectedDelay = delays[i];
       const startTime = Date.now();
-      
+
       // Simulate waiting
-      await new Promise(resolve => setTimeout(resolve, 10)); // Small delay for test
-      
+      await new Promise((resolve) => setTimeout(resolve, 10)); // Small delay for test
+
       Date.now() - startTime;
-      
+
       // In a real scenario, elapsed should be >= expectedDelay
       // For testing, we just verify the delay values are correct
       expect(expectedDelay).toBeGreaterThanOrEqual(60000);
@@ -124,7 +127,7 @@ describe('Property 22: Event Logging Completeness', () => {
 
           // Verify timestamp is valid ISO string
           expect(() => new Date(logEntry.timestamp)).not.toThrow();
-          
+
           // Verify timestamp is recent (within last second)
           const logTime = new Date(logEntry.timestamp).getTime();
           const now = Date.now();
@@ -156,7 +159,7 @@ describe('Property 22: Event Logging Completeness', () => {
           expect(logEntry.domain).toBeDefined();
           expect(logEntry.domain.length).toBeGreaterThan(0);
           expect(logEntry.timestamp).toBeDefined();
-          
+
           // Verify timestamp format
           expect(() => new Date(logEntry.timestamp)).not.toThrow();
         }
@@ -183,7 +186,7 @@ describe('Property 22: Event Logging Completeness', () => {
           expect(logEntry.event).toBe('kill_switch_activated');
           expect(logEntry.sessionsTerminated).toBe(sessionCount);
           expect(logEntry.timestamp).toBeDefined();
-          
+
           // Verify timestamp is valid
           const logTime = new Date(logEntry.timestamp).getTime();
           expect(logTime).toBeLessThanOrEqual(Date.now());

@@ -21,16 +21,19 @@ The Human-in-the-Loop Job Search & Application Agent is a system that automates 
 
 ### Requirement 1: Job Discovery and Deduplication
 
-**User Story:** As a job seeker, I want the system to automatically discover relevant job postings, so that I don't have to manually search multiple job boards.
+**User Story:** As a job seeker, I want the system to automatically discover relevant job postings based on my most recent and relevant experience, so that I don't have to manually search multiple job boards and I only see jobs that match my current career goals.
 
 #### Acceptance Criteria
 
-1. THE Background_Worker SHALL scrape job postings from LinkedIn and Indeed for "Full Stack Developer" roles
-2. WHEN a job posting is discovered, THE Background_Worker SHALL extract the job URL, company name, job title, and description
-3. WHEN processing a discovered job, THE System SHALL generate a Canonical_ID by creating a slug from the company name and job title
-4. WHEN a job with an existing Canonical_ID is encountered, THE System SHALL skip insertion and prevent duplicate entries
-5. WHEN a new unique job is identified, THE System SHALL insert it into the jobs table with status 'new'
-6. THE Background_Worker SHALL implement a 30-second delay between scrape requests to avoid IP bans
+1. WHEN the Background_Worker starts, THE System SHALL analyze the user's resume to extract the most relevant job titles based on recent experience and technologies
+2. THE System SHALL use an LLM to generate 1-3 personalized job search queries that reflect the user's current career focus (e.g., "Senior React Developer", "Full Stack Engineer Node.js")
+3. THE Background_Worker SHALL scrape job postings from LinkedIn and Indeed using the generated personalized search queries
+4. WHEN a job posting is discovered, THE Background_Worker SHALL extract the job URL, company name, job title, and description
+5. WHEN processing a discovered job, THE System SHALL generate a Canonical_ID by creating a slug from the company name and job title
+6. WHEN a job with an existing Canonical_ID is encountered, THE System SHALL skip insertion and prevent duplicate entries
+7. WHEN a new unique job is identified, THE System SHALL insert it into the jobs table with status 'new'
+8. THE Background_Worker SHALL implement a 30-second delay between scrape requests to avoid IP bans
+9. THE System SHALL prioritize the most recent 2-3 years of experience when generating job search queries to avoid matching outdated career paths (e.g., military experience when seeking tech roles)
 
 ### Requirement 2: Job Scoring and Matching
 
@@ -46,14 +49,19 @@ The Human-in-the-Loop Job Search & Application Agent is a system that automates 
 
 ### Requirement 3: User Profile Management
 
-**User Story:** As a job seeker, I want to store my profile information once, so that it can be reused across all job applications.
+**User Story:** As a job seeker, I want to store my profile information once and specify my current career goals, so that it can be reused across all job applications and the system only finds jobs I'm actually interested in.
 
 #### Acceptance Criteria
 
-1. THE System SHALL store user profile data in the user_profile table with fields: id, full_name, email, phone, github_url, resume_text, and bio
+1. THE System SHALL store user profile data in the user_profile table with fields: id, full_name, email, phone, github_url, resume_text, bio, desired_roles, excluded_keywords, and preferred_technologies
 2. WHEN the user updates their profile, THE System SHALL validate that email is in valid email format
 3. WHEN the user updates their profile, THE System SHALL persist all changes to the database immediately
 4. THE System SHALL support storing resume text up to 50,000 characters
+5. THE System SHALL allow users to specify desired_roles as a comma-separated list (e.g., "Full Stack Developer, React Engineer, Node.js Developer")
+6. THE System SHALL allow users to specify excluded_keywords as a comma-separated list (e.g., "military, defense, government, security clearance")
+7. THE System SHALL allow users to specify preferred_technologies as a comma-separated list (e.g., "React, Node.js, TypeScript, PostgreSQL")
+8. WHEN generating job search queries, THE System SHALL prioritize desired_roles if specified, otherwise infer from resume
+9. WHEN generating job search queries, THE System SHALL exclude any roles or industries matching excluded_keywords
 
 ### Requirement 4: Dashboard and Job Review
 

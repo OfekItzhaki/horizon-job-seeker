@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 /**
  * Database Setup Verification Script
- * 
+ *
  * This script verifies that the database is properly configured for running tests.
  * Run with: npx tsx src/db/verify-setup.ts
  */
@@ -44,7 +44,7 @@ async function verifySetup() {
   // Step 3: Check if tables exist
   console.log('3. Checking if required tables exist...');
   drizzle(sql);
-  
+
   try {
     // Try to query the jobs table
     await sql`SELECT COUNT(*) FROM jobs`;
@@ -71,13 +71,13 @@ async function verifySetup() {
   console.log('4. Verifying unique constraint on job_url...');
   try {
     const testUrl = `https://test-${Date.now()}.example.com/job`;
-    
+
     // Insert first job
     await sql`
       INSERT INTO jobs (job_url, company, title, description, status)
       VALUES (${testUrl}, 'Test Company', 'Test Job', 'Test Description', 'new')
     `;
-    
+
     // Try to insert duplicate
     try {
       await sql`
@@ -88,14 +88,16 @@ async function verifySetup() {
       await sql.end();
       process.exit(1);
     } catch (dupError: unknown) {
-      const isDuplicateError = dupError instanceof Error && (dupError.message.includes('unique') || ('code' in dupError && dupError.code === '23505'));
+      const isDuplicateError =
+        dupError instanceof Error &&
+        (dupError.message.includes('unique') || ('code' in dupError && dupError.code === '23505'));
       if (isDuplicateError) {
         console.log('   ✓ Unique constraint is properly enforced');
       } else {
         throw dupError;
       }
     }
-    
+
     // Clean up test data
     await sql`DELETE FROM jobs WHERE job_url = ${testUrl}`;
     console.log('');
@@ -111,7 +113,7 @@ async function verifySetup() {
   console.log('5. Verifying status ENUM constraint...');
   try {
     const testUrl = `https://test-${Date.now()}.example.com/job`;
-    
+
     // Try to insert with invalid status
     try {
       await sql`
@@ -122,7 +124,10 @@ async function verifySetup() {
       await sql.end();
       process.exit(1);
     } catch (enumError: unknown) {
-      const isEnumError = enumError instanceof Error && (enumError.message.includes('invalid input value') || ('code' in enumError && (enumError.code === '22P02' || enumError.code === '23514')));
+      const isEnumError =
+        enumError instanceof Error &&
+        (enumError.message.includes('invalid input value') ||
+          ('code' in enumError && (enumError.code === '22P02' || enumError.code === '23514')));
       if (isEnumError) {
         console.log('   ✓ ENUM constraint is properly enforced');
       } else {

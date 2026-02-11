@@ -36,6 +36,11 @@ Each task builds on previous work, with property-based tests integrated close to
     - Add email validation constraint
     - _Requirements: 3.1, 8.4_
   
+  - [x] 2.2.1 Add career preferences to user_profile schema
+    - Add desired_roles, excluded_keywords, preferred_technologies columns to user_profile table
+    - Create migration to add new columns
+    - _Requirements: 3.5, 3.6, 3.7_
+  
   - [x] 2.3 Generate and run database migrations
     - Create migration files from schema
     - Run migrations against Supabase PostgreSQL
@@ -50,20 +55,47 @@ Each task builds on previous work, with property-based tests integrated close to
   - [x] 3.1 Create canonical ID generator utility
     - Write generateCanonicalId function that slugifies company + title
     - Handle special characters, spaces, and case normalization
-    - _Requirements: 1.3_
+    - _Requirements: 1.5_
   
-  - [-] 3.2 Write property tests for canonical ID
+  - [ ] 3.2 Write property tests for canonical ID
     - **Property 1: Canonical ID Determinism**
-    - **Validates: Requirements 1.3**
+    - **Validates: Requirements 1.5**
   
   - [x] 3.3 Implement duplicate detection logic
     - Write checkDuplicate function that queries database by canonical ID
     - Return boolean indicating if job already exists
-    - _Requirements: 1.4_
+    - _Requirements: 1.6_
   
-  - [~] 3.4 Write property test for duplicate prevention
+  - [ ] 3.4 Write property test for duplicate prevention
     - **Property 2: Duplicate Prevention**
-    - **Validates: Requirements 1.4**
+    - **Validates: Requirements 1.6**
+
+- [ ] 3.5 Implement personalized job title generation
+  - [ ] 3.5.1 Create job title generation service
+    - Write generatePersonalizedJobTitles function using Groq LLM
+    - Accept resume text, desired roles, excluded keywords, preferred technologies
+    - Return 1-3 personalized job search queries
+    - Focus on most recent 2-3 years of experience
+    - _Requirements: 1.1, 1.2, 1.9_
+  
+  - [ ] 3.5.2 Integrate job title generation into background worker
+    - Fetch user profile including career preferences
+    - Generate personalized job titles before scraping
+    - Use generated titles for LinkedIn and Indeed searches
+    - _Requirements: 1.1, 1.2, 1.3, 1.8, 1.9_
+  
+  - [ ] 3.5.3 Update profile UI to include career preferences
+    - Add input fields for desired_roles, excluded_keywords, preferred_technologies
+    - Add helpful placeholders and examples
+    - Update profile API to handle new fields
+    - _Requirements: 3.5, 3.6, 3.7_
+  
+  - [ ] 3.5.4 Write unit tests for job title generation
+    - Test with desired_roles specified
+    - Test with excluded_keywords filtering
+    - Test with preferred_technologies prioritization
+    - Test focusing on recent experience only
+    - _Requirements: 1.1, 1.2, 1.9, 3.8, 3.9_
 
 - [-] 4. Build job scraper for LinkedIn and Indeed
   - [x] 4.1 Create base scraper class with Playwright
@@ -92,7 +124,7 @@ Each task builds on previous work, with property-based tests integrated close to
     - Skip disallowed URLs
     - _Requirements: 9.3_
   
-  - [~] 4.6 Write property tests for scraper
+  - [ ] 4.6 Write property tests for scraper
     - **Property 4: Scrape Rate Limiting**
     - **Property 5: Job Data Extraction Completeness**
     - **Property 18: User-Agent Header Presence**
@@ -106,17 +138,17 @@ Each task builds on previous work, with property-based tests integrated close to
     - Parse LLM response to extract match score (0-100)
     - _Requirements: 2.1, 2.2, 2.3_
   
-  - [~] 5.2 Add error handling for scoring failures
+  - [ ] 5.2 Add error handling for scoring failures
     - Catch API errors and set match_score to null
     - Log errors for monitoring
     - Implement retry logic with exponential backoff
     - _Requirements: 2.5, 10.2_
   
-  - [~] 5.3 Write property tests for scoring
+  - [ ] 5.3 Write property tests for scoring
     - **Property 6: Match Score Range Validation**
     - **Validates: Requirements 2.3**
   
-  - [~] 5.4 Write unit tests for scoring error handling
+  - [ ] 5.4 Write unit tests for scoring error handling
     - Test API timeout scenarios
     - Test invalid response handling
     - Test null match_score on failure
@@ -274,7 +306,7 @@ Each task builds on previous work, with property-based tests integrated close to
     - Add email validation feedback
     - _Requirements: 3.1, 3.2, 3.3_
   
-  - [~] 14.4 Write property test for job card rendering
+  - [ ] 14.4 Write property test for job card rendering
     - **Property 10: Job Card Rendering Completeness**
     - **Validates: Requirements 4.2**
 
@@ -296,27 +328,27 @@ Each task builds on previous work, with property-based tests integrated close to
     - Show confirmation message after activation
     - _Requirements: 7.1, 7.5_
   
-  - [~] 15.4 Write property test for kill switch UI
+  - [ ] 15.4 Write property test for kill switch UI
     - **Property 15: Kill Switch Termination** (already covered in 12.2)
     - **Validates: Requirements 7.1, 7.5**
 
-- [~] 16. Implement comprehensive error handling
-  - [~] 16.1 Add error handling to scraper
+- [ ] 16. Implement comprehensive error handling
+  - [ ] 16.1 Add error handling to scraper
     - Catch network errors, log and continue
     - Handle timeouts with retry logic
     - _Requirements: 10.1_
   
-  - [~] 16.2 Add error handling to automation engine
+  - [ ] 16.2 Add error handling to automation engine
     - Catch browser crashes, reset job status to 'approved'
     - Handle field detection failures, notify user
     - _Requirements: 10.3, 10.4_
   
-  - [~] 16.3 Add user-friendly error messages to UI
+  - [ ] 16.3 Add user-friendly error messages to UI
     - Display error notifications in dashboard
     - Show actionable error messages
     - _Requirements: 10.5_
   
-  - [~] 16.4 Write property test for error resilience
+  - [ ] 16.4 Write property test for error resilience
     - **Property 21: Error Resilience and Continuation**
     - **Validates: Requirements 10.1, 10.2, 10.3, 10.4**
 

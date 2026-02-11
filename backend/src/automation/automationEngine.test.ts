@@ -34,21 +34,17 @@ describe('Property 12: Form Field Filling Correctness', () => {
 
   it('should preserve data integrity during form filling', () => {
     fc.assert(
-      fc.property(
-        fc.string({ minLength: 1, maxLength: 100 }),
-        fc.emailAddress(),
-        (name, email) => {
-          // Simulate filling and reading back
-          const filled = { name, email };
-          const readBack = { ...filled };
+      fc.property(fc.string({ minLength: 1, maxLength: 100 }), fc.emailAddress(), (name, email) => {
+        // Simulate filling and reading back
+        const filled = { name, email };
+        const readBack = { ...filled };
 
-          // Data should be identical
-          expect(readBack.name).toBe(name);
-          expect(readBack.email).toBe(email);
-          expect(readBack.name.length).toBe(name.length);
-          expect(readBack.email.length).toBe(email.length);
-        }
-      ),
+        // Data should be identical
+        expect(readBack.name).toBe(name);
+        expect(readBack.email).toBe(email);
+        expect(readBack.name.length).toBe(name.length);
+        expect(readBack.email.length).toBe(email.length);
+      }),
       { numRuns: 100 }
     );
   });
@@ -58,44 +54,41 @@ describe('Property 12: Form Field Filling Correctness', () => {
 describe('Property 13: Resume PDF Round Trip', () => {
   it('should preserve key information in PDF generation', () => {
     fc.assert(
-      fc.property(
-        fc.string({ minLength: 100, maxLength: 1000 }),
-        (resumeText) => {
-          // Simulate PDF generation and text extraction
-          // In a real test, we'd generate PDF and extract text
-          // For property testing, we verify the text is preserved
-          
-          const keyPhrases = resumeText.split(' ').filter(w => w.length > 5).slice(0, 10);
-          
-          // Simulate extracted text (in real scenario, extract from PDF)
-          const extractedText = resumeText;
+      fc.property(fc.string({ minLength: 100, maxLength: 1000 }), (resumeText) => {
+        // Simulate PDF generation and text extraction
+        // In a real test, we'd generate PDF and extract text
+        // For property testing, we verify the text is preserved
 
-          // Verify key phrases are present
-          keyPhrases.forEach(phrase => {
-            expect(extractedText).toContain(phrase);
-          });
+        const keyPhrases = resumeText
+          .split(' ')
+          .filter((w) => w.length > 5)
+          .slice(0, 10);
 
-          // Verify length is similar (allowing for formatting differences)
-          expect(extractedText.length).toBeGreaterThanOrEqual(resumeText.length * 0.9);
-        }
-      ),
+        // Simulate extracted text (in real scenario, extract from PDF)
+        const extractedText = resumeText;
+
+        // Verify key phrases are present
+        keyPhrases.forEach((phrase) => {
+          expect(extractedText).toContain(phrase);
+        });
+
+        // Verify length is similar (allowing for formatting differences)
+        expect(extractedText.length).toBeGreaterThanOrEqual(resumeText.length * 0.9);
+      }),
       { numRuns: 50 }
     );
   });
 
   it('should handle special characters in resume text', () => {
     fc.assert(
-      fc.property(
-        fc.string({ minLength: 50, maxLength: 500 }),
-        (resumeText) => {
-          // PDF generation should not fail with special characters
-          expect(() => {
-            // Simulate PDF generation
-            const pdfContent = resumeText;
-            expect(pdfContent).toBeDefined();
-          }).not.toThrow();
-        }
-      ),
+      fc.property(fc.string({ minLength: 50, maxLength: 500 }), (resumeText) => {
+        // PDF generation should not fail with special characters
+        expect(() => {
+          // Simulate PDF generation
+          const pdfContent = resumeText;
+          expect(pdfContent).toBeDefined();
+        }).not.toThrow();
+      }),
       { numRuns: 100 }
     );
   });
@@ -105,26 +98,23 @@ describe('Property 13: Resume PDF Round Trip', () => {
 describe('Property 14: Automation Pause Before Submission', () => {
   it('should be in paused status after filling fields', () => {
     fc.assert(
-      fc.property(
-        fc.constant(null),
-        () => {
-          // Simulate automation workflow
-          let status = 'filling';
-          
-          // Fill fields
-          status = 'filling';
-          
-          // Locate submit button (but don't click)
-          status = 'paused';
+      fc.property(fc.constant(null), () => {
+        // Simulate automation workflow
+        let status = 'filling';
 
-          // Verify status is paused
-          expect(status).toBe('paused');
-          
-          // Verify submit button was NOT clicked
-          const submitClicked = false;
-          expect(submitClicked).toBe(false);
-        }
-      ),
+        // Fill fields
+        status = 'filling';
+
+        // Locate submit button (but don't click)
+        status = 'paused';
+
+        // Verify status is paused
+        expect(status).toBe('paused');
+
+        // Verify submit button was NOT clicked
+        const submitClicked = false;
+        expect(submitClicked).toBe(false);
+      }),
       { numRuns: 100 }
     );
   });
@@ -167,7 +157,7 @@ describe('Property 14: Automation Pause Before Submission', () => {
 
           // Time passing should not change status
           // (simulating waiting for user confirmation)
-          
+
           // Status should remain paused
           expect(status).toBe('paused');
           expect(submitClicked).toBe(false);

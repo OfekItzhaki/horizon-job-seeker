@@ -33,46 +33,16 @@ export class AutomationEngine {
   private sessions: Map<string, AutomationSession> = new Map();
 
   /**
-   * Handle browser crash - reset job status and clean up
-   */
-  private async handleBrowserCrash(sessionId: string, jobId: number, error: Error): Promise<void> {
-    console.error(`Browser crashed for session ${sessionId}:`, error);
-    
-    try {
-      // Reset job status to 'approved' so user can retry
-      await db.update(jobs)
-        .set({ status: 'approved' })
-        .where(eq(jobs.id, jobId));
-      
-      console.log(`Reset job ${jobId} status to 'approved' after browser crash`);
-      
-      // Broadcast error
-      wsManager.broadcast({
-        type: 'automation_error',
-        automationId: sessionId,
-        jobId,
-        message: `Browser crashed: ${error.message}. Job status reset to 'approved' - you can retry.`,
-        timestamp: new Date().toISOString(),
-      });
-    } catch (dbError) {
-      console.error('Error resetting job status after browser crash:', dbError);
-    }
-    
-    // Clean up session
-    this.sessions.delete(sessionId);
-  }
-
-  /**
    * Start a new automation session for a job
    */
   async startSession(jobId: number): Promise<AutomationSession> {
     let browser: Browser | null = null;
     let sessionId: string | null = null;
-    
+
     try {
       // Get job details
       const [job] = await db.select().from(jobs).where(eq(jobs.id, jobId)).limit(1);
-      
+
       if (!job) {
         throw new Error(`Job with ID ${jobId} not found`);
       }
@@ -83,7 +53,7 @@ export class AutomationEngine {
 
       // Launch browser in non-headless mode
       console.log(`Starting automation session for job ${jobId}`);
-      
+
       try {
         browser = await chromium.launch({
           headless: false, // User can see what's happening
@@ -123,14 +93,14 @@ export class AutomationEngine {
       // Navigate to job URL with timeout and error handling
       console.log(`Navigating to ${job.jobUrl}`);
       try {
-        await page.goto(job.jobUrl, { 
+        await page.goto(job.jobUrl, {
           waitUntil: 'networkidle',
-          timeout: 30000 // 30 second timeout
+          timeout: 30000, // 30 second timeout
         });
       } catch (error) {
         const errorMsg = `Failed to navigate to job URL: ${error instanceof Error ? error.message : 'Unknown error'}`;
         console.error(errorMsg);
-        
+
         // Broadcast error
         wsManager.broadcast({
           type: 'automation_error',
@@ -139,18 +109,18 @@ export class AutomationEngine {
           message: `Navigation failed: ${errorMsg}`,
           timestamp: new Date().toISOString(),
         });
-        
+
         // Clean up
         await browser.close();
         this.sessions.delete(sessionId);
-        
+
         throw new Error(errorMsg);
       }
 
       return session;
     } catch (error) {
       console.error('Error starting automation session:', error);
-      
+
       // Clean up browser if it was created
       if (browser) {
         try {
@@ -159,12 +129,12 @@ export class AutomationEngine {
           console.error('Error closing browser during cleanup:', closeError);
         }
       }
-      
+
       // Remove session if it was created
       if (sessionId) {
         this.sessions.delete(sessionId);
       }
-      
+
       throw error;
     }
   }
@@ -180,9 +150,8 @@ export class AutomationEngine {
       const html = await page.content();
 
       // Truncate HTML if too long (LLM token limits)
-      const truncatedHtml = html.length > 10000 
-        ? html.substring(0, 10000) + '...[truncated]'
-        : html;
+      const truncatedHtml =
+        html.length > 10000 ? html.substring(0, 10000) + '...[truncated]' : html;
 
       // Use LLM to identify form fields
       const prompt = `You are analyzing a job application form. Given the HTML structure, identify CSS selectors for the following fields:
@@ -227,7 +196,6 @@ ${truncatedHtml}`;
           ],
           temperature: 0.1,
           max_tokens: 1000,
-          timeout: 30000, // 30 second timeout
         });
 
         const content = response.choices[0]?.message?.content?.trim();
@@ -237,24 +205,26 @@ ${truncatedHtml}`;
 
         // Parse JSON response
         const parsed = JSON.parse(content);
-        
+
         if (!parsed.fields || !Array.isArray(parsed.fields)) {
           throw new Error('Invalid response format from LLM - missing fields array');
         }
-        
-        const fields: FormField[] = parsed.fields.map((f: { type: string; selector: string; fieldType: string; confidence: number }) => ({
-          type: f.type,
-          selector: f.selector,
-          label: f.fieldType,
-          confidence: f.confidence,
-        }));
+
+        const fields: FormField[] = parsed.fields.map(
+          (f: { type: string; selector: string; fieldType: string; confidence: number }) => ({
+            type: f.type,
+            selector: f.selector,
+            label: f.fieldType,
+            confidence: f.confidence,
+          })
+        );
 
         console.log(`Identified ${fields.length} form fields`);
         return fields;
       } catch (error) {
         const errorMsg = `LLM field detection failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
         console.error(errorMsg);
-        
+
         // Broadcast error if session info provided
         if (sessionId && jobId) {
           wsManager.broadcast({
@@ -265,7 +235,7 @@ ${truncatedHtml}`;
             timestamp: new Date().toISOString(),
           });
         }
-        
+
         throw new Error(errorMsg);
       }
     } catch (error) {
@@ -286,18 +256,18 @@ ${truncatedHtml}`;
         if (typeof value === 'string') {
           throw new Error('File upload requires Buffer, not string');
         }
-        
+
         // Save buffer to temp file and upload
         const fs = await import('fs/promises');
         const path = await import('path');
         const os = await import('os');
-        
+
         const tempDir = os.tmpdir();
         const tempFile = path.join(tempDir, `resume-${Date.now()}.pdf`);
         await fs.writeFile(tempFile, value);
-        
+
         await page.setInputFiles(field.selector, tempFile);
-        
+
         // Clean up temp file
         await fs.unlink(tempFile);
       } else {
@@ -305,7 +275,7 @@ ${truncatedHtml}`;
         if (typeof value !== 'string') {
           throw new Error('Text input requires string value');
         }
-        
+
         await page.fill(field.selector, value);
       }
 
@@ -375,7 +345,7 @@ ${truncatedHtml}`;
       }
 
       console.log('✓ All fields filled');
-      
+
       // Broadcast filling complete
       wsManager.broadcast({
         type: 'automation_filling',
@@ -386,7 +356,7 @@ ${truncatedHtml}`;
       });
     } catch (error) {
       session.status = 'error';
-      
+
       // Broadcast error
       wsManager.broadcast({
         type: 'automation_error',
@@ -395,7 +365,7 @@ ${truncatedHtml}`;
         message: `Error filling form: ${error instanceof Error ? error.message : 'Unknown error'}`,
         timestamp: new Date().toISOString(),
       });
-      
+
       throw error;
     }
   }
@@ -407,7 +377,7 @@ ${truncatedHtml}`;
     // Simple PDF generation using a library
     // For now, return a placeholder - in production, use pdfkit or puppeteer
     const PDFDocument = (await import('pdfkit')).default;
-    
+
     return new Promise((resolve, reject) => {
       const doc = new PDFDocument();
       const chunks: Buffer[] = [];
@@ -466,18 +436,23 @@ ${truncatedHtml}`;
       }
 
       // Highlight the submit button for user visibility
-      await session.page.evaluate((selector) => {
-        const button = document.querySelector(selector);
-        if (button) {
-          (button as HTMLElement).style.border = '3px solid red';
-          (button as HTMLElement).style.boxShadow = '0 0 10px red';
-        }
-      }, submitSelectors.find(_s => submitButton) || submitSelectors[0]);
+      await session.page.evaluate(
+        (selector: string) => {
+          const doc = (globalThis as any).document;
+          if (!doc) return;
+          const button = doc.querySelector(selector);
+          if (button && button.style) {
+            button.style.border = '3px solid red';
+            button.style.boxShadow = '0 0 10px red';
+          }
+        },
+        submitSelectors.find((_s) => submitButton) || submitSelectors[0]
+      );
 
       // Update session status to paused
       session.status = 'paused';
       console.log('✓ Paused at submit button - waiting for user confirmation');
-      
+
       // Broadcast paused status
       wsManager.broadcast({
         type: 'automation_paused',
@@ -488,7 +463,7 @@ ${truncatedHtml}`;
       });
     } catch (error) {
       session.status = 'error';
-      
+
       // Broadcast error
       wsManager.broadcast({
         type: 'automation_error',
@@ -497,7 +472,7 @@ ${truncatedHtml}`;
         message: `Error pausing at submit: ${error instanceof Error ? error.message : 'Unknown error'}`,
         timestamp: new Date().toISOString(),
       });
-      
+
       throw error;
     }
   }
@@ -512,7 +487,9 @@ ${truncatedHtml}`;
     }
 
     if (session.status !== 'paused') {
-      throw new Error(`Session must be paused to confirm submission. Current status: ${session.status}`);
+      throw new Error(
+        `Session must be paused to confirm submission. Current status: ${session.status}`
+      );
     }
 
     try {
@@ -547,13 +524,11 @@ ${truncatedHtml}`;
       }
 
       // Update job status to 'applied'
-      await db.update(jobs)
-        .set({ status: 'applied' })
-        .where(eq(jobs.id, session.jobId));
+      await db.update(jobs).set({ status: 'applied' }).where(eq(jobs.id, session.jobId));
 
       session.status = 'submitted';
       console.log('✓ Application submitted successfully');
-      
+
       // Broadcast submission success
       wsManager.broadcast({
         type: 'automation_submitted',
@@ -570,7 +545,7 @@ ${truncatedHtml}`;
       await this.cancelSession(sessionId);
     } catch (error) {
       session.status = 'error';
-      
+
       // Broadcast error
       wsManager.broadcast({
         type: 'automation_error',
@@ -579,7 +554,7 @@ ${truncatedHtml}`;
         message: `Error confirming submission: ${error instanceof Error ? error.message : 'Unknown error'}`,
         timestamp: new Date().toISOString(),
       });
-      
+
       throw error;
     }
   }
@@ -595,10 +570,10 @@ ${truncatedHtml}`;
 
     try {
       console.log(`Cancelling session ${sessionId}`);
-      
+
       await session.browser.close();
       session.status = 'cancelled';
-      
+
       // Broadcast cancellation
       wsManager.broadcast({
         type: 'automation_cancelled',
@@ -607,7 +582,7 @@ ${truncatedHtml}`;
         message: 'Automation cancelled',
         timestamp: new Date().toISOString(),
       });
-      
+
       this.sessions.delete(sessionId);
       console.log('✓ Session cancelled');
     } catch (error) {

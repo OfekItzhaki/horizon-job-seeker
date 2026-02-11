@@ -27,14 +27,17 @@ describe('Property 7: Profile Update Round Trip', () => {
         fc.option(fc.string({ minLength: 1, maxLength: 500 }), { nil: null }), // bio
         async (fullName, email, phone, githubUrl, resumeText, bio) => {
           // Insert profile
-          const [inserted] = await db.insert(userProfile).values({
-            fullName,
-            email,
-            phone,
-            githubUrl,
-            resumeText,
-            bio,
-          }).returning();
+          const [inserted] = await db
+            .insert(userProfile)
+            .values({
+              fullName,
+              email,
+              phone,
+              githubUrl,
+              resumeText,
+              bio,
+            })
+            .returning();
 
           // Retrieve profile
           const retrieved = await db.select().from(userProfile).limit(1);
@@ -67,13 +70,10 @@ describe('Property 8: Email Validation', () => {
 
   it('should correctly identify valid email formats', () => {
     fc.assert(
-      fc.property(
-        fc.emailAddress(),
-        (email) => {
-          // Valid emails should pass validation
-          expect(isValidEmail(email)).toBe(true);
-        }
-      ),
+      fc.property(fc.emailAddress(), (email) => {
+        // Valid emails should pass validation
+        expect(isValidEmail(email)).toBe(true);
+      }),
       { numRuns: 100 }
     );
   });
@@ -82,11 +82,11 @@ describe('Property 8: Email Validation', () => {
     fc.assert(
       fc.property(
         fc.oneof(
-          fc.string().filter(s => !s.includes('@')), // No @ symbol
+          fc.string().filter((s) => !s.includes('@')), // No @ symbol
           fc.constant('invalid@'), // Missing domain
           fc.constant('@invalid.com'), // Missing local part
           fc.constant('invalid@.com'), // Invalid domain
-          fc.constant('invalid @test.com'), // Space in email
+          fc.constant('invalid @test.com') // Space in email
         ),
         (invalidEmail) => {
           // Invalid emails should fail validation
@@ -99,34 +99,31 @@ describe('Property 8: Email Validation', () => {
 
   it('should validate email structure: contains @ and valid domain', () => {
     fc.assert(
-      fc.property(
-        fc.string(),
-        (str) => {
-          const hasAt = str.includes('@');
-          const parts = str.split('@');
-          const hasValidStructure = parts.length === 2 && 
-                                   parts[0].length > 0 && 
-                                   parts[1].includes('.') &&
-                                   parts[1].split('.').every(p => p.length > 0);
+      fc.property(fc.string(), (str) => {
+        const hasAt = str.includes('@');
+        const parts = str.split('@');
+        const hasValidStructure =
+          parts.length === 2 &&
+          parts[0].length > 0 &&
+          parts[1].includes('.') &&
+          parts[1].split('.').every((p) => p.length > 0);
 
-          const validationResult = isValidEmail(str);
+        const validationResult = isValidEmail(str);
 
-          // If email has valid structure, it should pass validation
-          if (hasValidStructure) {
-            expect(validationResult).toBe(true);
-          }
-          
-          // If email doesn't have @, it should fail
-          if (!hasAt) {
-            expect(validationResult).toBe(false);
-          }
+        // If email has valid structure, it should pass validation
+        if (hasValidStructure) {
+          expect(validationResult).toBe(true);
         }
-      ),
+
+        // If email doesn't have @, it should fail
+        if (!hasAt) {
+          expect(validationResult).toBe(false);
+        }
+      }),
       { numRuns: 100 }
     );
   });
 });
-
 
 // Unit tests for profile edge cases
 describe('Profile Edge Cases', () => {
@@ -140,15 +137,18 @@ describe('Profile Edge Cases', () => {
 
   it('should handle resume text at exactly 50,000 characters', async () => {
     const resumeText = 'a'.repeat(50000);
-    
-    const [profile] = await db.insert(userProfile).values({
-      fullName: 'Test User',
-      email: 'test@example.com',
-      resumeText,
-    }).returning();
+
+    const [profile] = await db
+      .insert(userProfile)
+      .values({
+        fullName: 'Test User',
+        email: 'test@example.com',
+        resumeText,
+      })
+      .returning();
 
     expect(profile.resumeText).toHaveLength(50000);
-    
+
     await db.delete(userProfile).where(eq(userProfile.id, profile.id));
   });
 
@@ -162,8 +162,8 @@ describe('Profile Edge Cases', () => {
     ];
 
     const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    
-    invalidEmails.forEach(email => {
+
+    invalidEmails.forEach((email) => {
       expect(EMAIL_REGEX.test(email)).toBe(false);
     });
   });
@@ -177,8 +177,8 @@ describe('Profile Edge Cases', () => {
     ];
 
     const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    
-    validEmails.forEach(email => {
+
+    validEmails.forEach((email) => {
       expect(EMAIL_REGEX.test(email)).toBe(true);
     });
   });

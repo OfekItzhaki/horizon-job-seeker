@@ -12,7 +12,7 @@ export class RobotsParser {
     try {
       const robotsUrl = `https://${domain}/robots.txt`;
       const response = await fetch(robotsUrl);
-      
+
       if (!response.ok) {
         console.log(`No robots.txt found for ${domain}, allowing all paths`);
         return;
@@ -36,13 +36,13 @@ export class RobotsParser {
 
     for (const line of lines) {
       const trimmed = line.trim();
-      
+
       // Check if this section applies to us
       if (trimmed.toLowerCase().startsWith('user-agent:')) {
         const agent = trimmed.substring(11).trim();
         isRelevantSection = agent === '*' || agent.toLowerCase().includes('bot');
       }
-      
+
       // Parse disallow rules
       if (isRelevantSection && trimmed.toLowerCase().startsWith('disallow:')) {
         const path = trimmed.substring(9).trim();

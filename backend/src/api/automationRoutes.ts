@@ -38,6 +38,7 @@ router.post('/start', async (req, res) => {
       status: session.status,
       message: 'Automation paused at submit button. Please review and confirm.',
     });
+    return;
   } catch (error) {
     console.error('Error starting automation:', error);
     res.status(500).json({
@@ -49,6 +50,7 @@ router.post('/start', async (req, res) => {
         timestamp: new Date().toISOString(),
       },
     });
+    return;
   }
 });
 
@@ -93,6 +95,7 @@ router.post('/confirm', async (req, res) => {
       automationId,
       message: 'Application submitted successfully',
     });
+    return;
   } catch (error) {
     console.error('Error confirming submission:', error);
     res.status(500).json({
@@ -104,6 +107,7 @@ router.post('/confirm', async (req, res) => {
         timestamp: new Date().toISOString(),
       },
     });
+    return;
   }
 });
 
@@ -148,6 +152,7 @@ router.post('/cancel', async (req, res) => {
       automationId,
       message: 'Automation cancelled successfully',
     });
+    return;
   } catch (error) {
     console.error('Error cancelling automation:', error);
     res.status(500).json({
@@ -159,6 +164,7 @@ router.post('/cancel', async (req, res) => {
         timestamp: new Date().toISOString(),
       },
     });
+    return;
   }
 });
 
@@ -166,10 +172,10 @@ router.post('/cancel', async (req, res) => {
  * POST /api/automation/kill
  * Emergency kill switch - terminate all active sessions
  */
-router.post('/kill', async (req, res) => {
+router.post('/kill', async (_req, res) => {
   try {
     console.log('🔴 Kill switch activated via API');
-    
+
     const terminated = await automationEngine.killAllSessions();
 
     res.json({
@@ -199,8 +205,8 @@ router.post('/kill', async (req, res) => {
 router.get('/sessions', (_req, res) => {
   try {
     const sessions = automationEngine.getAllSessions();
-    
-    const sessionData = sessions.map(s => ({
+
+    const sessionData = sessions.map((s) => ({
       id: s.id,
       jobId: s.jobId,
       status: s.status,

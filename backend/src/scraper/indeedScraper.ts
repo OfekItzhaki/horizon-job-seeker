@@ -6,7 +6,7 @@ export class IndeedScraper extends BaseScraper {
    */
   async scrapeJobs(searchQuery: string, maxJobs: number): Promise<ScrapedJob[]> {
     const jobs: ScrapedJob[] = [];
-    
+
     try {
       if (!this.page) {
         throw new Error('Browser not initialized');
@@ -14,7 +14,7 @@ export class IndeedScraper extends BaseScraper {
 
       // Indeed job search URL
       const searchUrl = `https://www.indeed.com/jobs?q=${encodeURIComponent(searchQuery)}&l=`;
-      
+
       await this.navigateWithRateLimit(searchUrl);
 
       // Wait for job listings to load
@@ -24,29 +24,31 @@ export class IndeedScraper extends BaseScraper {
 
       // Extract job cards
       const jobCards = await this.page.$$('.job_seen_beacon');
-      
+
       for (let i = 0; i < Math.min(jobCards.length, maxJobs); i++) {
         try {
           const card = jobCards[i];
-          
+
           // Extract job URL
           const linkElement = await card.$('a[data-jk]');
           const jobKey = linkElement ? await linkElement.getAttribute('data-jk') : '';
           const url = jobKey ? `https://www.indeed.com/viewjob?jk=${jobKey}` : '';
-          
+
           // Extract company name
           const companyElement = await card.$('[data-testid="company-name"]');
           const company = companyElement ? await companyElement.textContent() : '';
-          
+
           // Extract job title
           const titleElement = await card.$('.jobTitle');
           const title = titleElement ? await titleElement.textContent() : '';
-          
+
           // Extract job snippet/description
           const descElement = await card.$('.job-snippet');
-          const description = descElement ? await descElement.textContent() : 'Full job description available on Indeed';
+          const description = descElement
+            ? await descElement.textContent()
+            : 'Full job description available on Indeed';
 
-          if (url && company && title) {
+          if (url && company && title && description) {
             jobs.push({
               url: url.trim(),
               company: company.trim(),

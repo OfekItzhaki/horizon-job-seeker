@@ -33,17 +33,18 @@ export function getDb() {
 
 // Export db as a getter
 export const db = new Proxy({} as ReturnType<typeof drizzle>, {
-  get(target, prop) {
+  get(_target, prop) {
     return getDb()[prop as keyof ReturnType<typeof drizzle>];
-  }
+  },
 });
 
 // For backwards compatibility
 export const migrationClient = new Proxy({} as ReturnType<typeof postgres>, {
-  get(target, prop) {
+  get(_target, prop) {
     return getMigrationClient()[prop as keyof ReturnType<typeof postgres>];
   },
-  apply(target, thisArg, args) {
-    return getMigrationClient()(...args);
-  }
+  apply(_target, _thisArg, args: any[]) {
+    const client = getMigrationClient();
+    return (client as any)(...args);
+  },
 });

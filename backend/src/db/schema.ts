@@ -24,21 +24,26 @@ export const userProfile = pgTable('user_profile', {
   githubUrl: text('github_url'),
   linkedinUrl: text('linkedin_url'),
   location: text('location'),
-  
+
   // Resume data - can be plain text or structured
   resumeText: text('resume_text').notNull(),
-  
+
   // Structured profile data (JSON)
   // Format: { jobTitles: [{title, company, duration, responsibilities, achievements}], skills: [], education: [] }
   structuredData: text('structured_data'), // JSON string
-  
+
   // Professional summary
   bio: text('bio'),
-  
+
   // Search preferences
   desiredJobTitles: text('desired_job_titles'), // Comma-separated
   desiredLocations: text('desired_locations'), // Comma-separated
-  
+
+  // Career preferences for job filtering
+  desiredRoles: text('desired_roles'), // Comma-separated: "Full Stack Developer, React Engineer"
+  excludedKeywords: text('excluded_keywords'), // Comma-separated: "military, defense, government"
+  preferredTechnologies: text('preferred_technologies'), // Comma-separated: "React, Node.js, TypeScript"
+
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });

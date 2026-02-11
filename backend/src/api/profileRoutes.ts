@@ -3,7 +3,12 @@ import multer from 'multer';
 import { db } from '../db/index.js';
 import { userProfile, type StructuredProfileData } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
-import { parseResumeText, structuredDataToResumeText, extractDesiredJobTitles, parseResumeFile } from '../utils/resumeParser.js';
+import {
+  parseResumeText,
+  structuredDataToResumeText,
+  extractDesiredJobTitles,
+  parseResumeFile,
+} from '../utils/resumeParser.js';
 
 const router = Router();
 
@@ -20,7 +25,7 @@ const upload = multer({
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'application/msword',
     ];
-    
+
     if (allowedMimes.includes(file.mimetype)) {
       cb(null, true);
     } else {
@@ -45,10 +50,10 @@ function isValidEmail(email: string): boolean {
  * GET /api/profile
  * Retrieve user profile
  */
-router.get('/', async (req, res) => {
+router.get('/', async (_req, res) => {
   try {
     const profiles = await db.select().from(userProfile).limit(1);
-    
+
     if (profiles.length === 0) {
       return res.status(404).json({
         error: {
@@ -68,6 +73,7 @@ router.get('/', async (req, res) => {
     };
 
     res.json(responseProfile);
+    return;
   } catch (error) {
     console.error('Error fetching profile:', error);
     res.status(500).json({
@@ -79,6 +85,7 @@ router.get('/', async (req, res) => {
         timestamp: new Date().toISOString(),
       },
     });
+    return;
   }
 });
 
@@ -88,19 +95,19 @@ router.get('/', async (req, res) => {
  */
 router.put('/', async (req, res) => {
   try {
-    const { 
-      fullName, 
-      email, 
-      phone, 
-      githubUrl, 
+    const {
+      fullName,
+      email,
+      phone,
+      githubUrl,
       linkedinUrl,
       location,
-      resumeText, 
+      resumeText,
       bio,
       structuredData,
       desiredJobTitles,
       desiredLocations,
-      parseResume // Flag to trigger resume parsing
+      parseResume, // Flag to trigger resume parsing
     } = req.body;
 
     // Validate required fields
@@ -142,7 +149,7 @@ router.put('/', async (req, res) => {
     // Parse resume if requested
     let parsedStructuredData: StructuredProfileData | null = null;
     let autoDesiredJobTitles: string[] = [];
-    
+
     if (parseResume && resumeText) {
       try {
         console.log('Parsing resume text...');
@@ -165,23 +172,27 @@ router.put('/', async (req, res) => {
     let profile;
     if (existing.length === 0) {
       // Create new profile
-      [profile] = await db.insert(userProfile).values({
-        fullName,
-        email,
-        phone: phone || null,
-        githubUrl: githubUrl || null,
-        linkedinUrl: linkedinUrl || null,
-        location: location || null,
-        resumeText,
-        bio: bio || null,
-        structuredData: finalStructuredData ? JSON.stringify(finalStructuredData) : null,
-        desiredJobTitles: finalDesiredJobTitles || null,
-        desiredLocations: desiredLocations || null,
-        updatedAt: new Date(),
-      }).returning();
+      [profile] = await db
+        .insert(userProfile)
+        .values({
+          fullName,
+          email,
+          phone: phone || null,
+          githubUrl: githubUrl || null,
+          linkedinUrl: linkedinUrl || null,
+          location: location || null,
+          resumeText,
+          bio: bio || null,
+          structuredData: finalStructuredData ? JSON.stringify(finalStructuredData) : null,
+          desiredJobTitles: finalDesiredJobTitles || null,
+          desiredLocations: desiredLocations || null,
+          updatedAt: new Date(),
+        })
+        .returning();
     } else {
       // Update existing profile
-      [profile] = await db.update(userProfile)
+      [profile] = await db
+        .update(userProfile)
         .set({
           fullName,
           email,
@@ -207,6 +218,7 @@ router.put('/', async (req, res) => {
     };
 
     res.json(responseProfile);
+    return;
   } catch (error) {
     console.error('Error updating profile:', error);
     res.status(500).json({
@@ -218,6 +230,7 @@ router.put('/', async (req, res) => {
         timestamp: new Date().toISOString(),
       },
     });
+    return;
   }
 });
 
@@ -249,6 +262,7 @@ router.post('/parse-resume', async (req, res) => {
       desiredJobTitles,
       resumeText: structuredDataToResumeText(structuredData),
     });
+    return;
   } catch (error) {
     console.error('Error parsing resume:', error);
     res.status(500).json({
@@ -260,6 +274,7 @@ router.post('/parse-resume', async (req, res) => {
         timestamp: new Date().toISOString(),
       },
     });
+    return;
   }
 });
 
@@ -281,8 +296,11 @@ router.post('/upload-resume', upload.single('resume'), async (req, res) => {
     }
 
     console.log(`Parsing uploaded file: ${req.file.originalname} (${req.file.mimetype})`);
-    
-    const { resumeText, structuredData } = await parseResumeFile(req.file.buffer, req.file.mimetype);
+
+    const { resumeText, structuredData } = await parseResumeFile(
+      req.file.buffer,
+      req.file.mimetype
+    );
     const desiredJobTitles = extractDesiredJobTitles(structuredData);
 
     res.json({
@@ -291,6 +309,7 @@ router.post('/upload-resume', upload.single('resume'), async (req, res) => {
       desiredJobTitles,
       fileName: req.file.originalname,
     });
+    return;
   } catch (error) {
     console.error('Error parsing uploaded resume:', error);
     res.status(500).json({
@@ -302,6 +321,7 @@ router.post('/upload-resume', upload.single('resume'), async (req, res) => {
         timestamp: new Date().toISOString(),
       },
     });
+    return;
   }
 });
 

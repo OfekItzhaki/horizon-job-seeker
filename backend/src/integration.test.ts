@@ -14,24 +14,31 @@ describe('Integration Tests - Critical Flows', () => {
 
   beforeAll(async () => {
     // Create test profile
-    const [profile] = await db.insert(userProfile).values({
-      fullName: 'Test User',
-      email: 'test@example.com',
-      phone: '+1234567890',
-      resumeText: 'Senior Full Stack Developer with 5 years experience in React, Node.js, TypeScript, and PostgreSQL.',
-      bio: 'Passionate developer',
-    }).returning();
+    const [profile] = await db
+      .insert(userProfile)
+      .values({
+        fullName: 'Test User',
+        email: 'test@example.com',
+        phone: '+1234567890',
+        resumeText:
+          'Senior Full Stack Developer with 5 years experience in React, Node.js, TypeScript, and PostgreSQL.',
+        bio: 'Passionate developer',
+      })
+      .returning();
     testProfileId = profile.id;
 
     // Create test job
-    const [job] = await db.insert(jobs).values({
-      jobUrl: 'https://example.com/job/test-integration',
-      company: 'Test Company',
-      title: 'Senior Full Stack Developer',
-      description: 'Looking for a Senior Full Stack Developer with React and Node.js experience.',
-      status: 'new',
-      matchScore: null,
-    }).returning();
+    const [job] = await db
+      .insert(jobs)
+      .values({
+        jobUrl: 'https://example.com/job/test-integration',
+        company: 'Test Company',
+        title: 'Senior Full Stack Developer',
+        description: 'Looking for a Senior Full Stack Developer with React and Node.js experience.',
+        status: 'new',
+        matchScore: null,
+      })
+      .returning();
     testJobId = job.id;
   });
 
@@ -53,20 +60,21 @@ describe('Integration Tests - Critical Flows', () => {
       expect(job.status).toBe('new');
 
       // Get user profile
-      const [profile] = await db.select().from(userProfile).where(eq(userProfile.id, testProfileId));
+      const [profile] = await db
+        .select()
+        .from(userProfile)
+        .where(eq(userProfile.id, testProfileId));
       expect(profile).toBeDefined();
 
       // Score the job
       const score = await scoreJob(job.description, profile.resumeText);
-      
+
       // Verify score is valid
       expect(score).toBeGreaterThanOrEqual(0);
       expect(score).toBeLessThanOrEqual(100);
 
       // Update job with score
-      await db.update(jobs)
-        .set({ matchScore: score })
-        .where(eq(jobs.id, testJobId));
+      await db.update(jobs).set({ matchScore: score }).where(eq(jobs.id, testJobId));
 
       // Verify job was updated
       const [updatedJob] = await db.select().from(jobs).where(eq(jobs.id, testJobId));
@@ -76,13 +84,14 @@ describe('Integration Tests - Critical Flows', () => {
 
     it('should filter jobs by status and minimum score', async () => {
       // Query jobs with status 'new' and minimum score 0
-      const newJobs = await db.select()
+      const newJobs = await db
+        .select()
         .from(jobs)
         .where(eq(jobs.status, 'new'))
         .orderBy(jobs.matchScore);
 
       // Should include our test job
-      const testJob = newJobs.find(j => j.id === testJobId);
+      const testJob = newJobs.find((j) => j.id === testJobId);
       expect(testJob).toBeDefined();
       expect(testJob?.status).toBe('new');
     });
@@ -91,9 +100,7 @@ describe('Integration Tests - Critical Flows', () => {
   describe('Flow 2: Dashboard → Automation → Submission', () => {
     it('should update job status from new to approved', async () => {
       // Update job status to approved
-      await db.update(jobs)
-        .set({ status: 'approved' })
-        .where(eq(jobs.id, testJobId));
+      await db.update(jobs).set({ status: 'approved' }).where(eq(jobs.id, testJobId));
 
       // Verify status change
       const [job] = await db.select().from(jobs).where(eq(jobs.id, testJobId));
@@ -106,7 +113,10 @@ describe('Integration Tests - Critical Flows', () => {
       expect(job.status).toBe('approved');
 
       // Verify user profile exists
-      const [profile] = await db.select().from(userProfile).where(eq(userProfile.id, testProfileId));
+      const [profile] = await db
+        .select()
+        .from(userProfile)
+        .where(eq(userProfile.id, testProfileId));
       expect(profile).toBeDefined();
       expect(profile.fullName).toBeTruthy();
       expect(profile.email).toBeTruthy();
@@ -147,12 +157,13 @@ describe('Integration Tests - Critical Flows', () => {
 
     it('should update user profile', async () => {
       const newBio = 'Updated bio for integration test';
-      
-      await db.update(userProfile)
-        .set({ bio: newBio })
-        .where(eq(userProfile.id, testProfileId));
 
-      const [profile] = await db.select().from(userProfile).where(eq(userProfile.id, testProfileId));
+      await db.update(userProfile).set({ bio: newBio }).where(eq(userProfile.id, testProfileId));
+
+      const [profile] = await db
+        .select()
+        .from(userProfile)
+        .where(eq(userProfile.id, testProfileId));
       expect(profile.bio).toBe(newBio);
     });
   });
@@ -160,39 +171,29 @@ describe('Integration Tests - Critical Flows', () => {
   describe('Flow 5: Job Status Transitions', () => {
     it('should transition job through valid states', async () => {
       // new → approved
-      await db.update(jobs)
-        .set({ status: 'approved' })
-        .where(eq(jobs.id, testJobId));
-      
+      await db.update(jobs).set({ status: 'approved' }).where(eq(jobs.id, testJobId));
+
       let [job] = await db.select().from(jobs).where(eq(jobs.id, testJobId));
       expect(job.status).toBe('approved');
 
       // approved → applied
-      await db.update(jobs)
-        .set({ status: 'applied' })
-        .where(eq(jobs.id, testJobId));
-      
+      await db.update(jobs).set({ status: 'applied' }).where(eq(jobs.id, testJobId));
+
       [job] = await db.select().from(jobs).where(eq(jobs.id, testJobId));
       expect(job.status).toBe('applied');
 
       // Reset to new for cleanup
-      await db.update(jobs)
-        .set({ status: 'new' })
-        .where(eq(jobs.id, testJobId));
+      await db.update(jobs).set({ status: 'new' }).where(eq(jobs.id, testJobId));
     });
 
     it('should handle rejected status', async () => {
-      await db.update(jobs)
-        .set({ status: 'rejected' })
-        .where(eq(jobs.id, testJobId));
-      
+      await db.update(jobs).set({ status: 'rejected' }).where(eq(jobs.id, testJobId));
+
       const [job] = await db.select().from(jobs).where(eq(jobs.id, testJobId));
       expect(job.status).toBe('rejected');
 
       // Reset to new
-      await db.update(jobs)
-        .set({ status: 'new' })
-        .where(eq(jobs.id, testJobId));
+      await db.update(jobs).set({ status: 'new' }).where(eq(jobs.id, testJobId));
     });
   });
 
@@ -206,15 +207,18 @@ describe('Integration Tests - Critical Flows', () => {
     it('should handle invalid email format', () => {
       const invalidEmails = ['invalid', 'test@', '@example.com', 'test@.com'];
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      
-      invalidEmails.forEach(email => {
+
+      invalidEmails.forEach((email) => {
         expect(emailRegex.test(email)).toBe(false);
       });
     });
 
     it('should validate required profile fields', async () => {
-      const [profile] = await db.select().from(userProfile).where(eq(userProfile.id, testProfileId));
-      
+      const [profile] = await db
+        .select()
+        .from(userProfile)
+        .where(eq(userProfile.id, testProfileId));
+
       // Required fields must be present
       expect(profile.fullName).toBeTruthy();
       expect(profile.email).toBeTruthy();

@@ -30,13 +30,13 @@ export class RSSJobScraper extends BaseScraper {
       const rssFeeds = [
         // GitHub Jobs (if available)
         `https://jobs.github.com/positions.rss?description=${encodeURIComponent(searchQuery)}`,
-        
+
         // Stack Overflow Jobs RSS
         `https://stackoverflow.com/jobs/feed?q=${encodeURIComponent(searchQuery)}`,
-        
+
         // RemoteOK RSS
         `https://remoteok.com/remote-${encodeURIComponent(searchQuery.toLowerCase().replace(/\s+/g, '-'))}-jobs.rss`,
-        
+
         // We Work Remotely RSS
         `https://weworkremotely.com/categories/remote-programming-jobs.rss`,
       ];
@@ -54,15 +54,16 @@ export class RSSJobScraper extends BaseScraper {
             // Extract job information
             const title = item.title || 'Unknown Title';
             const url = item.link || item.guid || '';
-            const description = item.contentSnippet || item.content || item.description || 'No description available';
-            
+            const description =
+              item.contentSnippet || item.content || item.description || 'No description available';
+
             // Try to extract company name from title or content
             let company = 'Unknown Company';
-            
+
             // Common patterns: "Company Name - Job Title" or "Job Title at Company Name"
             const atMatch = title.match(/at\s+(.+?)(?:\s*\||$)/i);
             const dashMatch = title.match(/^(.+?)\s*-\s*/);
-            
+
             if (atMatch) {
               company = atMatch[1].trim();
             } else if (dashMatch) {

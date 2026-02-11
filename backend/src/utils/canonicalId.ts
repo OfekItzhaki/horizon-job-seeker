@@ -1,7 +1,7 @@
 /**
  * Generates a canonical ID from company name and job title
  * to prevent duplicate job entries.
- * 
+ *
  * @param company - Company name
  * @param title - Job title
  * @returns Canonical ID in format: "company-slug__job-title-slug"

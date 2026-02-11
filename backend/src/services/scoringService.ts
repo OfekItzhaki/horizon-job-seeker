@@ -52,7 +52,7 @@ export async function scoreJob(
         // Exponential backoff: 5s, 10s, 20s
         const delay = 5000 * Math.pow(2, attempt - 1);
         console.log(`Retry attempt ${attempt + 1} after ${delay}ms delay`);
-        await new Promise(resolve => setTimeout(resolve, delay));
+        await new Promise((resolve) => setTimeout(resolve, delay));
       }
 
       const prompt = `You are a job matching expert. Compare the following job description with the candidate's resume and provide a match score from 0 to 100.
@@ -83,7 +83,8 @@ Match Score (0-100):`;
           messages: [
             {
               role: 'system',
-              content: 'You are a job matching expert. Respond only with a number between 0 and 100.',
+              content:
+                'You are a job matching expert. Respond only with a number between 0 and 100.',
             },
             {
               role: 'user',
@@ -101,7 +102,8 @@ Match Score (0-100):`;
           messages: [
             {
               role: 'system',
-              content: 'You are a job matching expert. Respond only with a number between 0 and 100.',
+              content:
+                'You are a job matching expert. Respond only with a number between 0 and 100.',
             },
             {
               role: 'user',
@@ -120,7 +122,7 @@ Match Score (0-100):`;
 
       // Extract number from response
       const score = parseInt(content, 10);
-      
+
       // Validate score is in range
       if (isNaN(score) || score < 0 || score > 100) {
         throw new Error(`Invalid score from AI: ${content}`);
@@ -130,7 +132,7 @@ Match Score (0-100):`;
     } catch (error) {
       lastError = error as Error;
       console.error(`Scoring attempt ${attempt + 1} failed:`, error);
-      
+
       // Don't retry on certain errors
       if (error instanceof Error) {
         const message = error.message.toLowerCase();

@@ -26,7 +26,9 @@ function getOpenAI(): OpenAI {
 function getGroq(): Groq {
   if (!groq) {
     if (!process.env.GROQ_API_KEY) {
-      throw new Error('GROQ_API_KEY environment variable is not set. Get a free key at https://console.groq.com');
+      throw new Error(
+        'GROQ_API_KEY environment variable is not set. Get a free key at https://console.groq.com'
+      );
     }
     groq = new Groq({
       apiKey: process.env.GROQ_API_KEY,
@@ -77,7 +79,9 @@ export async function parseResumeFile(
     };
   } catch (error) {
     console.error('Error parsing resume file:', error);
-    throw new Error(`Failed to parse resume file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `Failed to parse resume file: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
   }
 }
 
@@ -126,7 +130,8 @@ ${resumeText}`;
         messages: [
           {
             role: 'system',
-            content: 'You are a resume parsing expert. Extract structured data from resumes and return only valid JSON.',
+            content:
+              'You are a resume parsing expert. Extract structured data from resumes and return only valid JSON.',
           },
           {
             role: 'user',
@@ -145,7 +150,8 @@ ${resumeText}`;
         messages: [
           {
             role: 'system',
-            content: 'You are a resume parsing expert. Extract structured data from resumes and return only valid JSON.',
+            content:
+              'You are a resume parsing expert. Extract structured data from resumes and return only valid JSON.',
           },
           {
             role: 'user',
@@ -174,16 +180,16 @@ ${resumeText}`;
 
     // Parse JSON response
     const parsed = JSON.parse(cleanedContent);
-    
+
     // Validate structure
     if (!parsed.workExperience || !Array.isArray(parsed.workExperience)) {
       throw new Error('Invalid response format - missing workExperience array');
     }
-    
+
     if (!parsed.skills || !Array.isArray(parsed.skills)) {
       throw new Error('Invalid response format - missing skills array');
     }
-    
+
     if (!parsed.education || !Array.isArray(parsed.education)) {
       throw new Error('Invalid response format - missing education array');
     }
@@ -191,7 +197,9 @@ ${resumeText}`;
     return parsed as StructuredProfileData;
   } catch (error) {
     console.error('Error parsing resume:', error);
-    throw new Error(`Failed to parse resume: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `Failed to parse resume: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
   }
 }
 
@@ -204,21 +212,21 @@ export function structuredDataToResumeText(data: StructuredProfileData): string 
   // Work Experience
   if (data.workExperience && data.workExperience.length > 0) {
     resumeText += 'WORK EXPERIENCE\n\n';
-    data.workExperience.forEach(exp => {
+    data.workExperience.forEach((exp) => {
       resumeText += `${exp.title} at ${exp.company}\n`;
       resumeText += `${exp.duration}\n\n`;
-      
+
       if (exp.responsibilities && exp.responsibilities.length > 0) {
         resumeText += 'Responsibilities:\n';
-        exp.responsibilities.forEach(resp => {
+        exp.responsibilities.forEach((resp) => {
           resumeText += `• ${resp}\n`;
         });
         resumeText += '\n';
       }
-      
+
       if (exp.achievements && exp.achievements.length > 0) {
         resumeText += 'Achievements:\n';
-        exp.achievements.forEach(ach => {
+        exp.achievements.forEach((ach) => {
           resumeText += `• ${ach}\n`;
         });
         resumeText += '\n';
@@ -235,7 +243,7 @@ export function structuredDataToResumeText(data: StructuredProfileData): string 
   // Education
   if (data.education && data.education.length > 0) {
     resumeText += '\nEDUCATION\n\n';
-    data.education.forEach(edu => {
+    data.education.forEach((edu) => {
       resumeText += `${edu.degree}\n`;
       resumeText += `${edu.institution}, ${edu.year}\n`;
       if (edu.details) {
@@ -248,7 +256,7 @@ export function structuredDataToResumeText(data: StructuredProfileData): string 
   // Certifications
   if (data.certifications && data.certifications.length > 0) {
     resumeText += '\nCERTIFICATIONS\n\n';
-    data.certifications.forEach(cert => {
+    data.certifications.forEach((cert) => {
       resumeText += `• ${cert}\n`;
     });
     resumeText += '\n';
@@ -257,7 +265,7 @@ export function structuredDataToResumeText(data: StructuredProfileData): string 
   // Languages
   if (data.languages && data.languages.length > 0) {
     resumeText += '\nLANGUAGES\n\n';
-    data.languages.forEach(lang => {
+    data.languages.forEach((lang) => {
       resumeText += `• ${lang}\n`;
     });
   }
@@ -270,14 +278,14 @@ export function structuredDataToResumeText(data: StructuredProfileData): string 
  */
 export function extractDesiredJobTitles(data: StructuredProfileData): string[] {
   const titles: Set<string> = new Set();
-  
+
   // Get most recent job titles
   if (data.workExperience && data.workExperience.length > 0) {
     // Take the 3 most recent job titles
-    data.workExperience.slice(0, 3).forEach(exp => {
+    data.workExperience.slice(0, 3).forEach((exp) => {
       titles.add(exp.title);
     });
   }
-  
+
   return Array.from(titles);
 }

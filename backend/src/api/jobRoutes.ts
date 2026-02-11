@@ -16,13 +16,13 @@ router.get('/', async (req, res) => {
   try {
     const { status, minScore } = req.query;
 
-    let query = db.select().from(jobs);
+    let results;
 
     // Filter by status if provided
     if (status && typeof status === 'string') {
       const validStatuses = ['new', 'rejected', 'approved', 'applied'];
       if (!validStatuses.includes(status)) {
-        return res.status(400).json({
+        res.status(400).json({
           error: {
             code: 'INVALID_STATUS',
             message: `Invalid status. Must be one of: ${validStatuses.join(', ')}`,
@@ -30,18 +30,22 @@ router.get('/', async (req, res) => {
             timestamp: new Date().toISOString(),
           },
         });
+        return;
       }
-      query = query.where(eq(jobs.status, status as 'new' | 'rejected' | 'approved' | 'applied'));
+      results = await db
+        .select()
+        .from(jobs)
+        .where(eq(jobs.status, status as 'new' | 'rejected' | 'approved' | 'applied'))
+        .orderBy(desc(jobs.createdAt), desc(jobs.matchScore));
+    } else {
+      results = await db.select().from(jobs).orderBy(desc(jobs.createdAt), desc(jobs.matchScore));
     }
-
-    // Execute query and order by created_at descending (most recent first), then by match_score
-    let results = await query.orderBy(desc(jobs.createdAt), desc(jobs.matchScore));
 
     // Filter by minScore if provided (done in-memory since matchScore can be null)
     if (minScore !== undefined) {
       const minScoreNum = parseInt(minScore as string, 10);
       if (isNaN(minScoreNum)) {
-        return res.status(400).json({
+        res.status(400).json({
           error: {
             code: 'INVALID_MIN_SCORE',
             message: 'minScore must be a valid number',
@@ -49,8 +53,9 @@ router.get('/', async (req, res) => {
             timestamp: new Date().toISOString(),
           },
         });
+        return;
       }
-      results = results.filter(job => job.matchScore !== null && job.matchScore >= minScoreNum);
+      results = results.filter((job) => job.matchScore !== null && job.matchScore >= minScoreNum);
     }
 
     res.json(results);
@@ -65,6 +70,7 @@ router.get('/', async (req, res) => {
         timestamp: new Date().toISOString(),
       },
     });
+    return;
   }
 });
 
@@ -118,10 +124,10 @@ router.patch('/:id/status', async (req, res) => {
 
     // Validate state transitions (Property 11: Job Status State Machine)
     const validTransitions: Record<string, string[]> = {
-      'new': ['approved', 'rejected'],
-      'approved': ['applied', 'approved'], // Can stay approved if automation cancelled
-      'rejected': [], // Terminal state
-      'applied': [], // Terminal state
+      new: ['approved', 'rejected'],
+      approved: ['applied', 'approved'], // Can stay approved if automation cancelled
+      rejected: [], // Terminal state
+      applied: [], // Terminal state
     };
 
     const allowedNextStates = validTransitions[currentJob.status];
@@ -137,12 +143,14 @@ router.patch('/:id/status', async (req, res) => {
     }
 
     // Update status
-    const [updated] = await db.update(jobs)
+    const [updated] = await db
+      .update(jobs)
       .set({ status: status as 'new' | 'rejected' | 'approved' | 'applied' })
       .where(eq(jobs.id, jobId))
       .returning();
 
     res.json(updated);
+    return;
   } catch (error) {
     console.error('Error updating job status:', error);
     res.status(500).json({
@@ -154,6 +162,7 @@ router.patch('/:id/status', async (req, res) => {
         timestamp: new Date().toISOString(),
       },
     });
+    return;
   }
 });
 
@@ -207,6 +216,7 @@ router.post('/:id/apply', async (req, res) => {
       message: 'Use POST /api/automation/start with { jobId } to start automation',
       jobId,
     });
+    return;
   } catch (error) {
     console.error('Error triggering automation:', error);
     res.status(500).json({
@@ -218,6 +228,7 @@ router.post('/:id/apply', async (req, res) => {
         timestamp: new Date().toISOString(),
       },
     });
+    return;
   }
 });
 

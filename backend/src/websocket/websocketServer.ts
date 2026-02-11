@@ -2,7 +2,13 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { Server } from 'http';
 
 export interface AutomationUpdate {
-  type: 'automation_started' | 'automation_filling' | 'automation_paused' | 'automation_submitted' | 'automation_cancelled' | 'automation_error';
+  type:
+    | 'automation_started'
+    | 'automation_filling'
+    | 'automation_paused'
+    | 'automation_submitted'
+    | 'automation_cancelled'
+    | 'automation_error';
   automationId: string;
   jobId: number;
   message: string;
@@ -31,11 +37,13 @@ class WebSocketManager {
       });
 
       // Send initial connection confirmation
-      ws.send(JSON.stringify({
-        type: 'connected',
-        message: 'Connected to Job Search Agent WebSocket',
-        timestamp: new Date().toISOString(),
-      }));
+      ws.send(
+        JSON.stringify({
+          type: 'connected',
+          message: 'Connected to Job Search Agent WebSocket',
+          timestamp: new Date().toISOString(),
+        })
+      );
     });
 
     console.log('WebSocket server initialized on /ws');
@@ -43,7 +51,7 @@ class WebSocketManager {
 
   broadcast(update: AutomationUpdate) {
     const message = JSON.stringify(update);
-    
+
     this.clients.forEach((client) => {
       if (client.readyState === WebSocket.OPEN) {
         client.send(message);

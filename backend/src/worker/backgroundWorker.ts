@@ -25,13 +25,13 @@ export class BackgroundWorker {
     console.log(`Starting background worker with ${intervalMs}ms interval`);
 
     // Run immediately on start
-    this.runScrapeJob().catch(error => {
+    this.runScrapeJob().catch((error) => {
       console.error('Initial scrape job failed:', error);
     });
 
     // Schedule periodic runs
     this.intervalId = setInterval(() => {
-      this.runScrapeJob().catch(error => {
+      this.runScrapeJob().catch((error) => {
         console.error('Scheduled scrape job failed:', error);
       });
     }, intervalMs);
@@ -89,7 +89,7 @@ export class BackgroundWorker {
     config: ScraperConfig
   ): Promise<void> {
     console.log(`\n--- Scraping from ${source} ---`);
-    
+
     let scraper;
     try {
       // Initialize appropriate scraper
@@ -104,10 +104,7 @@ export class BackgroundWorker {
       await scraper.init();
 
       // Scrape jobs
-      const scrapedJobs = await scraper.scrapeJobs(
-        config.searchQuery,
-        config.maxJobsPerRun
-      );
+      const scrapedJobs = await scraper.scrapeJobs(config.searchQuery, config.maxJobsPerRun);
 
       console.log(`Found ${scrapedJobs.length} jobs from ${source}`);
 
@@ -133,7 +130,7 @@ export class BackgroundWorker {
     try {
       // Check for duplicates
       const isDuplicate = await checkDuplicate(job.company, job.title);
-      
+
       if (isDuplicate) {
         console.log(`Skipping duplicate: ${job.company} - ${job.title}`);
         return;
@@ -143,7 +140,7 @@ export class BackgroundWorker {
 
       // Get user profile for scoring
       const profile = await this.getUserProfile();
-      
+
       if (!profile) {
         console.warn('No user profile found - storing job without score');
         await insertJob({
@@ -159,7 +156,7 @@ export class BackgroundWorker {
 
       // Score the job
       const score = await scoreJob(job.description, profile.resumeText);
-      
+
       if (score === null) {
         console.warn(`Scoring failed for ${job.title} - storing with null score`);
       } else {

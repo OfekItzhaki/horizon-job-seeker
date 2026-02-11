@@ -36,27 +36,30 @@ describe('Property 9: Dashboard Job Filtering and Sorting', () => {
           }));
 
           // Insert test jobs
-          await db.insert(jobs).values(uniqueJobs);
+          for (const job of uniqueJobs) {
+            await db.insert(jobs).values({
+              ...job,
+              status: job.status as 'new' | 'rejected' | 'approved' | 'applied',
+            });
+          }
 
           // Query for 'new' status jobs
-          const results = await db.select()
-            .from(jobs)
-            .where(eq(jobs.status, 'new'));
+          const results = await db.select().from(jobs).where(eq(jobs.status, 'new'));
 
           // Verify all results have status 'new'
-          results.forEach(job => {
+          results.forEach((job) => {
             expect(job.status).toBe('new');
           });
 
           // Verify no jobs with other statuses are included
-          const newJobsCount = uniqueJobs.filter(j => j.status === 'new').length;
+          const newJobsCount = uniqueJobs.filter((j) => j.status === 'new').length;
           expect(results).toHaveLength(newJobsCount);
 
           // Verify ordering by match_score descending (nulls last)
           const nonNullScores = results
-            .filter(j => j.matchScore !== null)
-            .map(j => j.matchScore as number);
-          
+            .filter((j) => j.matchScore !== null)
+            .map((j) => j.matchScore as number);
+
           for (let i = 0; i < nonNullScores.length - 1; i++) {
             expect(nonNullScores[i]).toBeGreaterThanOrEqual(nonNullScores[i + 1]);
           }
@@ -87,17 +90,21 @@ describe('Property 11: Job Status State Machine', () => {
 
     for (const transition of validTransitions) {
       // Create job with initial status
-      const [job] = await db.insert(jobs).values({
-        jobUrl: `https://example.com/job-${Date.now()}-${Math.random()}`,
-        company: 'Test Company',
-        title: 'Test Job',
-        description: 'Test description',
-        matchScore: 75,
-        status: transition.from as 'new' | 'rejected' | 'approved' | 'applied',
-      }).returning();
+      const [job] = await db
+        .insert(jobs)
+        .values({
+          jobUrl: `https://example.com/job-${Date.now()}-${Math.random()}`,
+          company: 'Test Company',
+          title: 'Test Job',
+          description: 'Test description',
+          matchScore: 75,
+          status: transition.from as 'new' | 'rejected' | 'approved' | 'applied',
+        })
+        .returning();
 
       // Attempt transition
-      const [updated] = await db.update(jobs)
+      const [updated] = await db
+        .update(jobs)
         .set({ status: transition.to as 'new' | 'rejected' | 'approved' | 'applied' })
         .where(eq(jobs.id, job.id))
         .returning();
@@ -124,13 +131,13 @@ describe('Property 11: Job Status State Machine', () => {
 
     // Verify these transitions are not in the valid set
     const validTransitions: Record<string, string[]> = {
-      'new': ['approved', 'rejected'],
-      'approved': ['applied', 'approved'],
-      'rejected': [],
-      'applied': [],
+      new: ['approved', 'rejected'],
+      approved: ['applied', 'approved'],
+      rejected: [],
+      applied: [],
     };
 
-    invalidTransitions.forEach(transition => {
+    invalidTransitions.forEach((transition) => {
       const allowedNextStates = validTransitions[transition.from];
       expect(allowedNextStates).not.toContain(transition.to);
     });
@@ -143,10 +150,10 @@ describe('Property 11: Job Status State Machine', () => {
         fc.constantFrom('new', 'rejected', 'approved', 'applied'),
         (fromStatus, toStatus) => {
           const validTransitions: Record<string, string[]> = {
-            'new': ['approved', 'rejected'],
-            'approved': ['applied', 'approved'],
-            'rejected': [],
-            'applied': [],
+            new: ['approved', 'rejected'],
+            approved: ['applied', 'approved'],
+            rejected: [],
+            applied: [],
           };
 
           const isValid = validTransitions[fromStatus].includes(toStatus);

@@ -10,16 +10,16 @@ import { sql } from 'drizzle-orm';
 
 /**
  * Database Constraints Property Tests
- * 
+ *
  * These tests verify that database constraints are properly enforced:
  * - Property 16: Unique constraint on job_url column
  * - Property 17: ENUM constraint on status column
- * 
+ *
  * SETUP REQUIREMENTS:
  * 1. Set DATABASE_URL environment variable to your test database
  * 2. Run migrations to create the schema: npm run db:migrate
  * 3. Ensure the database is accessible
- * 
+ *
  * Example DATABASE_URL:
  * - Local: postgresql://postgres:postgres@localhost:5432/job_search_agent_test
  * - Supabase: postgresql://user:password@db.xxx.supabase.co:5432/postgres
@@ -34,8 +34,8 @@ describe('Database Constraints Property Tests', () => {
     if (!process.env.DATABASE_URL) {
       throw new Error(
         'DATABASE_URL environment variable is not set. ' +
-        'Please set it to run database tests. ' +
-        'Example: postgresql://postgres:postgres@localhost:5432/job_search_agent_test'
+          'Please set it to run database tests. ' +
+          'Example: postgresql://postgres:postgres@localhost:5432/job_search_agent_test'
       );
     }
 
@@ -66,7 +66,7 @@ describe('Database Constraints Property Tests', () => {
   describe('Property 16: Database Unique Constraint Enforcement', () => {
     test('attempting to insert duplicate job URLs should fail with unique constraint violation', async () => {
       // **Validates: Requirements 8.2**
-      
+
       await fc.assert(
         fc.asyncProperty(
           fc.webUrl(), // Generate random URLs
@@ -95,12 +95,13 @@ describe('Database Constraints Property Tests', () => {
             };
 
             // Expect unique constraint violation
-            await expect(
-              testDb.insert(jobs).values(duplicateJob)
-            ).rejects.toThrow();
+            await expect(testDb.insert(jobs).values(duplicateJob)).rejects.toThrow();
 
             // Verify only one record exists
-            const allJobs = await testDb.select().from(jobs).where(sql`job_url = ${jobUrl}`);
+            const allJobs = await testDb
+              .select()
+              .from(jobs)
+              .where(sql`job_url = ${jobUrl}`);
             expect(allJobs).toHaveLength(1);
             expect(allJobs[0].company).toBe(company); // Original record unchanged
           }
@@ -111,7 +112,7 @@ describe('Database Constraints Property Tests', () => {
 
     test('inserting jobs with unique URLs should succeed', async () => {
       // **Validates: Requirements 8.2**
-      
+
       await fc.assert(
         fc.asyncProperty(
           fc.array(
@@ -126,7 +127,7 @@ describe('Database Constraints Property Tests', () => {
           async (jobsData) => {
             // Ensure all URLs are unique
             const uniqueJobs = Array.from(
-              new Map(jobsData.map(job => [job.jobUrl, job])).values()
+              new Map(jobsData.map((job) => [job.jobUrl, job])).values()
             );
 
             // All insertions should succeed
@@ -151,14 +152,14 @@ describe('Database Constraints Property Tests', () => {
   describe('Property 17: Status ENUM Constraint Enforcement', () => {
     test('attempting to set invalid status values should fail with constraint violation', async () => {
       // **Validates: Requirements 8.3**
-      
+
       await fc.assert(
         fc.asyncProperty(
           fc.webUrl(),
           fc.string({ minLength: 1, maxLength: 100 }), // company
           fc.string({ minLength: 1, maxLength: 100 }), // title
           fc.string({ minLength: 1, maxLength: 500 }), // description
-          fc.string().filter(s => !['new', 'rejected', 'approved', 'applied'].includes(s)), // invalid status
+          fc.string().filter((s) => !['new', 'rejected', 'approved', 'applied'].includes(s)), // invalid status
           async (jobUrl, company, title, description, invalidStatus) => {
             // Attempt to insert job with invalid status
             const jobWithInvalidStatus = {
@@ -166,13 +167,11 @@ describe('Database Constraints Property Tests', () => {
               company,
               title,
               description,
-              status: invalidStatus as 'new' | 'approved' | 'dismissed' | 'applied', // Force invalid status
+              status: invalidStatus, // Invalid status
             };
 
             // Should fail with constraint violation
-            await expect(
-              testDb.insert(jobs).values(jobWithInvalidStatus)
-            ).rejects.toThrow();
+            await expect(testDb.insert(jobs).values(jobWithInvalidStatus as any)).rejects.toThrow();
 
             // Verify no job was inserted
             const allJobs = await testDb.select().from(jobs);
@@ -185,7 +184,7 @@ describe('Database Constraints Property Tests', () => {
 
     test('all valid status values should be accepted', async () => {
       // **Validates: Requirements 8.3**
-      
+
       const validStatuses = ['new', 'rejected', 'approved', 'applied'] as const;
 
       await fc.assert(
@@ -208,7 +207,10 @@ describe('Database Constraints Property Tests', () => {
             await testDb.insert(jobs).values(newJob);
 
             // Verify job was inserted with correct status
-            const insertedJobs = await testDb.select().from(jobs).where(sql`job_url = ${jobUrl}`);
+            const insertedJobs = await testDb
+              .select()
+              .from(jobs)
+              .where(sql`job_url = ${jobUrl}`);
             expect(insertedJobs).toHaveLength(1);
             expect(insertedJobs[0].status).toBe(status);
           }
@@ -219,14 +221,14 @@ describe('Database Constraints Property Tests', () => {
 
     test('updating to invalid status should fail', async () => {
       // **Validates: Requirements 8.3**
-      
+
       await fc.assert(
         fc.asyncProperty(
           fc.webUrl(),
           fc.string({ minLength: 1, maxLength: 100 }), // company
           fc.string({ minLength: 1, maxLength: 100 }), // title
           fc.string({ minLength: 1, maxLength: 500 }), // description
-          fc.string().filter(s => !['new', 'rejected', 'approved', 'applied'].includes(s)), // invalid status
+          fc.string().filter((s) => !['new', 'rejected', 'approved', 'applied'].includes(s)), // invalid status
           async (jobUrl, company, title, description, invalidStatus) => {
             // First insert a valid job
             const newJob: NewJob = {
@@ -241,13 +243,17 @@ describe('Database Constraints Property Tests', () => {
 
             // Attempt to update to invalid status should fail
             await expect(
-              testDb.update(jobs)
-                .set({ status: invalidStatus as 'new' | 'approved' | 'dismissed' | 'applied' })
+              testDb
+                .update(jobs)
+                .set({ status: invalidStatus as any })
                 .where(sql`id = ${insertedJob.id}`)
             ).rejects.toThrow();
 
             // Verify status remains unchanged
-            const [unchangedJob] = await testDb.select().from(jobs).where(sql`id = ${insertedJob.id}`);
+            const [unchangedJob] = await testDb
+              .select()
+              .from(jobs)
+              .where(sql`id = ${insertedJob.id}`);
             expect(unchangedJob.status).toBe('new');
           }
         ),

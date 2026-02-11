@@ -8,7 +8,7 @@ export interface ScrapedJob {
 }
 
 export interface ScraperConfig {
-  sources: ('linkedin' | 'indeed')[];
+  sources: ('linkedin' | 'indeed' | 'rss')[];
   searchQuery: string;
   delayBetweenRequests: number; // milliseconds
   maxJobsPerRun: number;
@@ -19,7 +19,8 @@ export abstract class BaseScraper {
   protected page: Page | null = null;
   protected lastRequestTime: Map<string, number> = new Map();
   protected readonly minDelay = 30000; // 30 seconds minimum delay
-  protected readonly userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 JobSearchAgent/1.0';
+  protected readonly userAgent =
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 JobSearchAgent/1.0';
 
   /**
    * Initialize browser instance
@@ -55,7 +56,7 @@ export abstract class BaseScraper {
       if (elapsed < this.minDelay) {
         const waitTime = this.minDelay - elapsed;
         console.log(`Rate limiting: waiting ${waitTime}ms before next request to ${domain}`);
-        await new Promise(resolve => setTimeout(resolve, waitTime));
+        await new Promise((resolve) => setTimeout(resolve, waitTime));
       }
     }
     this.lastRequestTime.set(domain, Date.now());
@@ -71,52 +72,62 @@ export abstract class BaseScraper {
 
     const domain = new URL(url).hostname;
     await this.enforceRateLimit(domain);
-    
+
     // Exponential backoff delays for 429 responses: 60s, 120s, 240s
     const backoffDelays = [60000, 120000, 240000];
     let attempt = 0;
 
     while (attempt <= backoffDelays.length) {
       try {
-        const response = await this.page.goto(url, { 
+        const response = await this.page.goto(url, {
           waitUntil: 'networkidle',
-          timeout: 30000 // 30 second timeout
+          timeout: 30000, // 30 second timeout
         });
-        
+
         // Check for rate limiting
         if (response && response.status() === 429) {
           if (attempt < backoffDelays.length) {
             const delay = backoffDelays[attempt];
             console.log(`Rate limited (429) - backing off for ${delay}ms (attempt ${attempt + 1})`);
-            console.log(`[LOG] Rate limit encountered for ${domain} at ${new Date().toISOString()}`);
-            
-            await new Promise(resolve => setTimeout(resolve, delay));
+            console.log(
+              `[LOG] Rate limit encountered for ${domain} at ${new Date().toISOString()}`
+            );
+
+            await new Promise((resolve) => setTimeout(resolve, delay));
             attempt++;
             continue;
           } else {
             throw new Error(`Rate limited after ${backoffDelays.length} retry attempts`);
           }
         }
-        
+
         // Success - exit loop
         return;
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        
+
         // Handle network errors with retry
-        if (errorMessage.includes('timeout') || errorMessage.includes('net::ERR') || errorMessage.includes('Navigation failed')) {
+        if (
+          errorMessage.includes('timeout') ||
+          errorMessage.includes('net::ERR') ||
+          errorMessage.includes('Navigation failed')
+        ) {
           if (retries > 0) {
             console.log(`Network error: ${errorMessage}. Retrying... (${retries} attempts left)`);
-            console.log(`[LOG] Network error for ${domain} at ${new Date().toISOString()}: ${errorMessage}`);
-            await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5s before retry
+            console.log(
+              `[LOG] Network error for ${domain} at ${new Date().toISOString()}: ${errorMessage}`
+            );
+            await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait 5s before retry
             return this.navigateWithRateLimit(url, retries - 1);
           } else {
             console.error(`Network error after all retries: ${errorMessage}`);
-            console.log(`[LOG] Network error exhausted retries for ${domain} at ${new Date().toISOString()}`);
+            console.log(
+              `[LOG] Network error exhausted retries for ${domain} at ${new Date().toISOString()}`
+            );
             throw new Error(`Navigation failed after ${3 - retries + 1} attempts: ${errorMessage}`);
           }
         }
-        
+
         // If it's not a 429 error or network error, rethrow
         if (attempt === 0) {
           throw error;
