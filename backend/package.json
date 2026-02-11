@@ -19,7 +19,7 @@
     "db:migrate": "tsx src/db/migrate.ts",
     "db:studio": "drizzle-kit studio",
     "db:verify": "tsx src/db/verify-setup.ts",
-    "prepare": "husky"
+    "prepare": "node -e \"try { require('husky').install() } catch (e) {}\""
   },
   "lint-staged": {
     "*.{ts,tsx}": [
@@ -32,8 +32,15 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.3",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
     "@types/multer": "^2.0.0",
+    "@types/node": "^20.19.33",
     "@types/pdf-parse": "^1.1.5",
+    "@types/pdfkit": "^0.13.4",
+    "@types/swagger-jsdoc": "^6.0.4",
+    "@types/swagger-ui-express": "^4.1.8",
+    "@types/ws": "^8.5.10",
     "cors": "^2.8.5",
     "dotenv": "^16.4.1",
     "drizzle-orm": "^0.29.3",
@@ -47,18 +54,15 @@
     "pdf-parse-fork": "^1.2.0",
     "pdfkit": "^0.15.0",
     "playwright": "^1.41.1",
+    "postgres": "^3.4.3",
     "rss-parser": "^3.13.0",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
+    "typescript": "^5.9.3",
     "ws": "^8.16.0",
     "zod": "^3.22.4"
   },
   "devDependencies": {
-    "@types/cors": "^2.8.17",
-    "@types/express": "^4.17.21",
-    "@types/node": "^20.11.16",
-    "@types/pdfkit": "^0.13.4",
-    "@types/swagger-jsdoc": "^6.0.4",
-    "@types/swagger-ui-express": "^4.1.8",
-    "@types/ws": "^8.5.10",
     "@typescript-eslint/eslint-plugin": "^6.20.0",
     "@typescript-eslint/parser": "^6.20.0",
     "drizzle-kit": "^0.20.13",
@@ -66,12 +70,8 @@
     "fast-check": "^3.15.1",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
-    "postgres": "^3.4.3",
     "prettier": "^3.8.1",
-    "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.1",
     "tsx": "^4.7.0",
-    "typescript": "^5.3.3",
     "vitest": "^1.2.2"
   }
 }
