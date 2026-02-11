@@ -30,7 +30,7 @@
     "mammoth": "^1.11.0",
     "multer": "^2.0.2",
     "openai": "^4.26.0",
-    "pdf-parse": "^1.1.1",
+    "pdf-parse-fork": "^1.2.0",
     "pdfkit": "^0.15.0",
     "playwright": "^1.41.1",
     "rss-parser": "^3.13.0",

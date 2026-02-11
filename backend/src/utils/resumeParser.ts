@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
 import Groq from 'groq-sdk';
-import pdfParse from 'pdf-parse';
+import pdfParse from 'pdf-parse-fork';
 import mammoth from 'mammoth';
 import type { StructuredProfileData } from '../db/schema.js';
 
