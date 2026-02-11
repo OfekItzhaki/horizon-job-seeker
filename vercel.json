@@ -1,10 +1,3 @@
 {
-  "version": 2,
-  "buildCommand": "cd frontend && npm run build",
-  "outputDirectory": "frontend/.next",
-  "framework": "nextjs",
-  "env": {
-    "NODE_ENV": "production",
-    "NEXT_PUBLIC_API_URL": "https://api.horizon-jobs.ofeklabs.dev"
-  }
+  "framework": "nextjs"
 }
