@@ -18,33 +18,21 @@ jobs:
         with:
           node-version: "20"
           cache: "npm"
-          cache-dependency-path: |
-            backend/package-lock.json
-            frontend/package-lock.json
 
-      - name: Install Backend Dependencies
-        working-directory: ./backend
-        run: npm ci
-
-      - name: Install Frontend Dependencies
-        working-directory: ./frontend
+      - name: Install Dependencies
         run: npm ci
 
       - name: Lint Backend
-        working-directory: ./backend
-        run: npm run lint
+        run: npm run lint --workspace=backend
 
       - name: Lint Frontend
-        working-directory: ./frontend
-        run: npm run lint
+        run: npm run lint --workspace=frontend
 
       - name: Format Check Backend
-        working-directory: ./backend
-        run: npm run format:check
+        run: npm run format:check --workspace=backend
 
       - name: Format Check Frontend
-        working-directory: ./frontend
-        run: npm run format:check
+        run: npm run format:check --workspace=frontend
 
   test-backend:
     name: Test Backend
@@ -72,18 +60,15 @@ jobs:
         with:
           node-version: "20"
           cache: "npm"
-          cache-dependency-path: backend/package-lock.json
 
       - name: Install Dependencies
-        working-directory: ./backend
         run: npm ci
 
       - name: Run Tests
-        working-directory: ./backend
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/horizon_test
           NODE_ENV: test
-        run: npm test
+        run: npm test --workspace=backend
 
   build-backend:
     name: Build Backend
@@ -97,15 +82,12 @@ jobs:
         with:
           node-version: "20"
           cache: "npm"
-          cache-dependency-path: backend/package-lock.json
 
       - name: Install Dependencies
-        working-directory: ./backend
         run: npm ci
 
       - name: Build
-        working-directory: ./backend
-        run: npm run build
+        run: npm run build --workspace=backend
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
@@ -125,15 +107,12 @@ jobs:
         with:
           node-version: "20"
           cache: "npm"
-          cache-dependency-path: frontend/package-lock.json
 
       - name: Install Dependencies
-        working-directory: ./frontend
         run: npm ci
 
       - name: Build
-        working-directory: ./frontend
-        run: npm run build
+        run: npm run build --workspace=frontend
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
