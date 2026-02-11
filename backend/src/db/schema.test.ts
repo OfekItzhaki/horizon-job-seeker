@@ -34,8 +34,8 @@ describe('Database Constraints Property Tests', () => {
     if (!process.env.DATABASE_URL) {
       throw new Error(
         'DATABASE_URL environment variable is not set. ' +
-        'Please set it to run database tests. ' +
-        'Example: postgresql://postgres:postgres@localhost:5432/job_search_agent_test'
+          'Please set it to run database tests. ' +
+          'Example: postgresql://postgres:postgres@localhost:5432/job_search_agent_test'
       );
     }
 
