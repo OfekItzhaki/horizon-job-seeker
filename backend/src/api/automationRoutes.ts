@@ -199,6 +199,41 @@ router.post('/kill', async (_req, res) => {
 });
 
 /**
+ * POST /api/automation/scrape
+ * Trigger a manual job scraping run (for cron jobs)
+ * This endpoint is designed to be called by external cron services
+ */
+router.post('/scrape', async (_req, res) => {
+  try {
+    console.log('📡 Manual scrape job triggered via API');
+
+    // Import BackgroundWorker class and create instance
+    const { BackgroundWorker } = await import('../worker/backgroundWorker.js');
+    const worker = new BackgroundWorker();
+
+    // Trigger a single scrape run
+    await worker.runScrapeJob();
+
+    res.json({
+      success: true,
+      message: 'Job scraping completed successfully',
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('Error running scrape job:', error);
+    res.status(500).json({
+      error: {
+        code: 'SCRAPE_JOB_ERROR',
+        message: 'Failed to run scrape job',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        retryable: true,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  }
+});
+
+/**
  * GET /api/automation/sessions
  * Get all active automation sessions
  */

@@ -438,12 +438,12 @@ ${truncatedHtml}`;
       // Highlight the submit button for user visibility
       await session.page.evaluate(
         (selector: string) => {
-          const doc = window.document;
+          const doc = (globalThis as any).window?.document;
           if (!doc) return;
           const button = doc.querySelector(selector);
-          if (button && button.style) {
-            button.style.border = '3px solid red';
-            button.style.boxShadow = '0 0 10px red';
+          if (button && (button as any).style) {
+            (button as any).style.border = '3px solid red';
+            (button as any).style.boxShadow = '0 0 10px red';
           }
         },
         submitSelectors.find((_s) => submitButton) || submitSelectors[0]

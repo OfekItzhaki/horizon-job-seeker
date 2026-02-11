@@ -18,6 +18,9 @@ if (!process.env.OPENAI_API_KEY) {
 // Create and start the worker
 const worker = new BackgroundWorker();
 
+// Export for use in API routes
+export const backgroundWorker = worker;
+
 // Handle graceful shutdown
 process.on('SIGINT', () => {
   console.log('\nReceived SIGINT, shutting down gracefully...');
