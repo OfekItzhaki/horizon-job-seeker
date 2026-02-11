@@ -1,9 +1,42 @@
 import { Router } from 'express';
 import { db } from '../db/index.js';
-import { jobs } from '../db/schema.js';
+import { jobs, applicationSubmissions } from '../db/schema.js';
 import { eq, desc } from 'drizzle-orm';
 
 const router = Router();
+
+/**
+ * GET /api/jobs/applied
+ * Get all applied jobs with their submission data
+ */
+router.get('/applied', async (_req, res) => {
+  try {
+    const appliedJobs = await db
+      .select({
+        job: jobs,
+        submission: applicationSubmissions,
+      })
+      .from(jobs)
+      .leftJoin(applicationSubmissions, eq(jobs.id, applicationSubmissions.jobId))
+      .where(eq(jobs.status, 'applied'))
+      .orderBy(desc(applicationSubmissions.submittedAt));
+
+    res.json(appliedJobs);
+    return;
+  } catch (error) {
+    console.error('Error fetching applied jobs:', error);
+    res.status(500).json({
+      error: {
+        code: 'FETCH_APPLIED_JOBS_ERROR',
+        message: 'Failed to fetch applied jobs',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        retryable: true,
+        timestamp: new Date().toISOString(),
+      },
+    });
+    return;
+  }
+});
 
 /**
  * GET /api/jobs

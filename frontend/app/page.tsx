@@ -32,7 +32,7 @@ interface AutomationUpdate {
 export default function Home() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'new' | 'all'>('new');
+  const [filter, setFilter] = useState<'new' | 'all' | 'applied'>('new');
 
   // Automation modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -146,7 +146,15 @@ export default function Home() {
   const fetchJobs = async () => {
     try {
       setLoading(true);
-      const url = filter === 'new' ? `${API_URL}/api/jobs?status=new` : `${API_URL}/api/jobs`;
+      let url;
+      
+      if (filter === 'applied') {
+        url = `${API_URL}/api/jobs/applied`;
+      } else if (filter === 'new') {
+        url = `${API_URL}/api/jobs?status=new`;
+      } else {
+        url = `${API_URL}/api/jobs`;
+      }
 
       const response = await fetch(url);
       const data = await response.json();
@@ -308,6 +316,16 @@ export default function Home() {
               }`}
             >
               All Jobs
+            </button>
+            <button
+              onClick={() => setFilter('applied')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                filter === 'applied'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Applied Jobs
             </button>
           </nav>
         </div>

@@ -87,6 +87,32 @@ router.post('/confirm', async (req, res) => {
       });
     }
 
+    // Get user profile to save submission snapshot
+    const { db } = await import('../db/index.js');
+    const { userProfile, applicationSubmissions, jobs } = await import('../db/schema.js');
+    const { eq } = await import('drizzle-orm');
+    
+    const [profile] = await db.select().from(userProfile).limit(1);
+    
+    if (profile) {
+      // Save submission snapshot
+      await db.insert(applicationSubmissions).values({
+        jobId: session.jobId,
+        fullName: profile.fullName,
+        email: profile.email,
+        phone: profile.phone,
+        githubUrl: profile.githubUrl,
+        linkedinUrl: profile.linkedinUrl,
+        location: profile.location,
+        resumeText: profile.resumeText,
+        bio: profile.bio,
+        automationId: automationId,
+      });
+      
+      // Update job status to applied
+      await db.update(jobs).set({ status: 'applied' }).where(eq(jobs.id, session.jobId));
+    }
+
     // Confirm submission
     await automationEngine.confirmSubmission(automationId);
 
