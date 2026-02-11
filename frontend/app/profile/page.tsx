@@ -59,9 +59,12 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [parsing, setParsing] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [inputMethod, setInputMethod] = useState<'resume' | 'manual'>('resume');
   const [showStructuredData, setShowStructuredData] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -122,6 +125,61 @@ export default function ProfilePage() {
       setMessage({ type: 'error', text: 'Failed to parse resume' });
     } finally {
       setParsing(false);
+    }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    if (!allowedTypes.includes(file.type)) {
+      setMessage({ type: 'error', text: 'Please upload a PDF or DOCX file' });
+      return;
+    }
+
+    // Validate file size (10MB max)
+    if (file.size > 10 * 1024 * 1024) {
+      setMessage({ type: 'error', text: 'File size must be less than 10MB' });
+      return;
+    }
+
+    setSelectedFile(file);
+    setUploading(true);
+    setMessage(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('resume', file);
+
+      const response = await fetch(`${API_URL}/api/profile/upload-resume`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setProfile({
+          ...profile,
+          resumeText: data.resumeText,
+          structuredData: data.structuredData,
+          desiredJobTitles: data.desiredJobTitles.join(', '),
+        });
+        setShowStructuredData(true);
+        setMessage({ 
+          type: 'success', 
+          text: `File "${data.fileName}" uploaded and parsed successfully!` 
+        });
+      } else {
+        const error = await response.json();
+        setMessage({ type: 'error', text: error.error?.message || 'Failed to upload file' });
+      }
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      setMessage({ type: 'error', text: 'Failed to upload file' });
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -243,6 +301,64 @@ export default function ProfilePage() {
             </div>
           </div>
 
+          {/* File Upload Section - At the Top */}
+          {inputMethod === 'resume' && (
+            <div className="mb-6 p-6 bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-200 rounded-lg">
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                    🤖 AI-Powered Resume Parser
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    Upload your resume (PDF/DOCX) or paste text below, and AI will extract all your information automatically
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {/* File Upload */}
+                <div className="space-y-2">
+                  <label className="block">
+                    <div className="flex items-center justify-center w-full px-4 py-6 border-2 border-dashed border-purple-300 rounded-lg cursor-pointer hover:border-purple-500 hover:bg-purple-50 transition">
+                      <div className="text-center">
+                        <svg className="mx-auto h-12 w-12 text-purple-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                          <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                        <p className="mt-2 text-sm font-medium text-gray-700">
+                          {selectedFile ? selectedFile.name : 'Upload PDF or DOCX'}
+                        </p>
+                        <p className="mt-1 text-xs text-gray-500">
+                          Click to browse or drag and drop
+                        </p>
+                      </div>
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept=".pdf,.docx,.doc"
+                        onChange={handleFileUpload}
+                        disabled={uploading}
+                      />
+                    </div>
+                  </label>
+                  {uploading && (
+                    <div className="flex items-center justify-center text-sm text-purple-600">
+                      <span className="inline-block animate-spin mr-2">⚙️</span>
+                      Uploading and parsing...
+                    </div>
+                  )}
+                </div>
+
+                {/* OR Divider */}
+                <div className="flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-gray-400">OR</div>
+                    <div className="text-xs text-gray-500 mt-1">Choose one method</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Basic Information */}
             <div className="space-y-4">
@@ -348,7 +464,7 @@ export default function ProfilePage() {
             {/* Resume Section */}
             {inputMethod === 'resume' && (
               <div className="space-y-4">
-                <h2 className="text-lg font-semibold text-gray-900 border-b pb-2">Resume</h2>
+                <h2 className="text-lg font-semibold text-gray-900 border-b pb-2">Resume Text</h2>
                 
                 <div>
                   <label htmlFor="resumeText" className="block text-sm font-medium text-gray-700 mb-2">
@@ -361,7 +477,7 @@ export default function ProfilePage() {
                     value={profile.resumeText}
                     onChange={(e) => setProfile({ ...profile, resumeText: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
-                    placeholder="Paste your resume text here..."
+                    placeholder="Paste your resume text here, or upload a file above..."
                   />
                   <div className="flex justify-between items-center mt-2">
                     <p className="text-sm text-gray-500">
@@ -371,7 +487,7 @@ export default function ProfilePage() {
                       type="button"
                       onClick={handleParseResume}
                       disabled={parsing || !profile.resumeText}
-                      className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                     >
                       {parsing ? (
                         <>
@@ -379,7 +495,7 @@ export default function ProfilePage() {
                           Parsing...
                         </>
                       ) : (
-                        '🤖 Parse Resume with AI'
+                        '🤖 Parse Text with AI'
                       )}
                     </button>
                   </div>

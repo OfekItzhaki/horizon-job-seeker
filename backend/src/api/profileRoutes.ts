@@ -1,10 +1,33 @@
 import { Router } from 'express';
+import multer from 'multer';
 import { db } from '../db/index.js';
 import { userProfile, type StructuredProfileData } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
-import { parseResumeText, structuredDataToResumeText, extractDesiredJobTitles } from '../utils/resumeParser.js';
+import { parseResumeText, structuredDataToResumeText, extractDesiredJobTitles, parseResumeFile } from '../utils/resumeParser.js';
 
 const router = Router();
+
+// Configure multer for file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB max file size
+  },
+  fileFilter: (_req, file, cb) => {
+    // Accept only PDF and DOCX files
+    const allowedMimes = [
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/msword',
+    ];
+    
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only PDF and DOCX files are allowed.'));
+    }
+  },
+});
 
 /**
  * Email validation regex
@@ -232,6 +255,48 @@ router.post('/parse-resume', async (req, res) => {
       error: {
         code: 'PARSE_ERROR',
         message: 'Failed to parse resume',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        retryable: true,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  }
+});
+
+/**
+ * POST /api/profile/upload-resume
+ * Upload and parse resume file (PDF or DOCX)
+ */
+router.post('/upload-resume', upload.single('resume'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        error: {
+          code: 'NO_FILE',
+          message: 'No file uploaded',
+          retryable: false,
+          timestamp: new Date().toISOString(),
+        },
+      });
+    }
+
+    console.log(`Parsing uploaded file: ${req.file.originalname} (${req.file.mimetype})`);
+    
+    const { resumeText, structuredData } = await parseResumeFile(req.file.buffer, req.file.mimetype);
+    const desiredJobTitles = extractDesiredJobTitles(structuredData);
+
+    res.json({
+      resumeText,
+      structuredData,
+      desiredJobTitles,
+      fileName: req.file.originalname,
+    });
+  } catch (error) {
+    console.error('Error parsing uploaded resume:', error);
+    res.status(500).json({
+      error: {
+        code: 'PARSE_ERROR',
+        message: 'Failed to parse uploaded resume',
         details: error instanceof Error ? error.message : 'Unknown error',
         retryable: true,
         timestamp: new Date().toISOString(),

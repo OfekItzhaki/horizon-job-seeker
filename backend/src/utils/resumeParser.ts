@@ -1,5 +1,7 @@
 import OpenAI from 'openai';
 import Groq from 'groq-sdk';
+import pdfParse from 'pdf-parse';
+import mammoth from 'mammoth';
 import type { StructuredProfileData } from '../db/schema.js';
 
 // Lazy initialization to ensure env vars are loaded
@@ -31,6 +33,52 @@ function getGroq(): Groq {
     });
   }
   return groq;
+}
+
+/**
+ * Parse resume file (PDF or DOCX) and extract text
+ */
+export async function parseResumeFile(
+  fileBuffer: Buffer,
+  mimeType: string
+): Promise<{ resumeText: string; structuredData: StructuredProfileData }> {
+  let resumeText = '';
+
+  try {
+    if (mimeType === 'application/pdf') {
+      // Parse PDF
+      console.log('Parsing PDF file...');
+      const pdfData = await pdfParse(fileBuffer);
+      resumeText = pdfData.text;
+    } else if (
+      mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+      mimeType === 'application/msword'
+    ) {
+      // Parse DOCX
+      console.log('Parsing DOCX file...');
+      const result = await mammoth.extractRawText({ buffer: fileBuffer });
+      resumeText = result.value;
+    } else {
+      throw new Error(`Unsupported file type: ${mimeType}`);
+    }
+
+    if (!resumeText || resumeText.trim().length === 0) {
+      throw new Error('No text extracted from file');
+    }
+
+    console.log(`Extracted ${resumeText.length} characters from file`);
+
+    // Parse the extracted text
+    const structuredData = await parseResumeText(resumeText);
+
+    return {
+      resumeText,
+      structuredData,
+    };
+  } catch (error) {
+    console.error('Error parsing resume file:', error);
+    throw new Error(`Failed to parse resume file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 }
 
 /**
