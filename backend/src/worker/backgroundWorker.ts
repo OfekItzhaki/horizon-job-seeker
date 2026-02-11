@@ -1,5 +1,6 @@
 import { LinkedInScraper } from '../scraper/linkedinScraper.js';
 import { IndeedScraper } from '../scraper/indeedScraper.js';
+import { RSSJobScraper } from '../scraper/rssJobScraper.js';
 import { checkDuplicate, insertJob } from '../services/jobService.js';
 import { scoreJob } from '../services/scoringService.js';
 import { db } from '../db/index.js';
@@ -56,18 +57,21 @@ export class BackgroundWorker {
     const startTime = Date.now();
 
     const config: ScraperConfig = {
-      sources: ['linkedin', 'indeed'],
+      sources: ['rss', 'linkedin', 'indeed'], // RSS first (most reliable)
       searchQuery: 'Full Stack Developer',
       delayBetweenRequests: 30000, // 30 seconds
       maxJobsPerRun: 10,
     };
 
     try {
-      // Scrape from LinkedIn
-      await this.scrapeFromSource('linkedin', config);
+      // Scrape from RSS feeds (most reliable)
+      await this.scrapeFromSource('rss', config);
 
-      // Scrape from Indeed
-      await this.scrapeFromSource('indeed', config);
+      // Optionally scrape from LinkedIn (requires auth)
+      // await this.scrapeFromSource('linkedin', config);
+
+      // Optionally scrape from Indeed (has bot detection)
+      // await this.scrapeFromSource('indeed', config);
 
       const duration = Date.now() - startTime;
       console.log(`=== Scrape job completed in ${duration}ms ===`);
@@ -81,7 +85,7 @@ export class BackgroundWorker {
    * Scrape jobs from a specific source
    */
   private async scrapeFromSource(
-    source: 'linkedin' | 'indeed',
+    source: 'rss' | 'linkedin' | 'indeed',
     config: ScraperConfig
   ): Promise<void> {
     console.log(`\n--- Scraping from ${source} ---`);
@@ -89,7 +93,9 @@ export class BackgroundWorker {
     let scraper;
     try {
       // Initialize appropriate scraper
-      if (source === 'linkedin') {
+      if (source === 'rss') {
+        scraper = new RSSJobScraper();
+      } else if (source === 'linkedin') {
         scraper = new LinkedInScraper();
       } else {
         scraper = new IndeedScraper();
