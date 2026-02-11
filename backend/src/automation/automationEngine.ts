@@ -418,7 +418,7 @@ ${truncatedHtml}`;
         'button:has-text("Send")',
       ];
 
-      let submitButton = null;
+      let submitButton: any = null;
       for (const selector of submitSelectors) {
         try {
           submitButton = await session.page.$(selector);
