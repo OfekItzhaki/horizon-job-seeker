@@ -171,6 +171,7 @@ describe('Database Constraints Property Tests', () => {
             };
 
             // Should fail with constraint violation
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             await expect(testDb.insert(jobs).values(jobWithInvalidStatus as any)).rejects.toThrow();
 
             // Verify no job was inserted
@@ -245,6 +246,7 @@ describe('Database Constraints Property Tests', () => {
             await expect(
               testDb
                 .update(jobs)
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 .set({ status: invalidStatus as any })
                 .where(sql`id = ${insertedJob.id}`)
             ).rejects.toThrow();

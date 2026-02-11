@@ -608,7 +608,7 @@ export default function ProfilePage() {
                   placeholder="Senior Developer, Lead Engineer, Tech Lead"
                 />
                 <p className="mt-1 text-xs text-gray-500">
-                  Comma-separated list of job titles you're interested in
+                  Comma-separated list of job titles you&apos;re interested in
                 </p>
               </div>
 

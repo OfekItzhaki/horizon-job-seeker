@@ -3,12 +3,12 @@ declare module 'pdf-parse-fork' {
     PDFFormatVersion?: string;
     IsAcroFormPresent?: boolean;
     IsXFAPresent?: boolean;
-    [key: string]: any;
+    [key: string]: unknown;
   }
 
   interface PDFMetadata {
-    _metadata?: any;
-    [key: string]: any;
+    _metadata?: unknown;
+    [key: string]: unknown;
   }
 
   interface PDFData {
@@ -20,7 +20,7 @@ declare module 'pdf-parse-fork' {
     version: string;
   }
 
-  function pdfParse(dataBuffer: Buffer, options?: any): Promise<PDFData>;
+  function pdfParse(dataBuffer: Buffer, options?: unknown): Promise<PDFData>;
 
   export = pdfParse;
 }
