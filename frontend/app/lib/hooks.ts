@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, Job, UserProfile } from './api';
+import { api, UserProfile } from './api';
 
 // Query Keys
 export const queryKeys = {
