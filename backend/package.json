@@ -7,15 +7,28 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
+    "start:production": "node start-production.js",
     "worker": "tsx src/worker/index.ts",
     "test": "vitest",
     "test:db": "vitest run src/db/schema.test.ts",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
+    "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json}\"",
     "db:generate": "drizzle-kit generate:pg",
     "db:migrate": "tsx src/db/migrate.ts",
     "db:studio": "drizzle-kit studio",
-    "db:verify": "tsx src/db/verify-setup.ts"
+    "db:verify": "tsx src/db/verify-setup.ts",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.3",
@@ -26,6 +39,7 @@
     "drizzle-orm": "^0.29.3",
     "express": "^4.18.2",
     "groq-sdk": "^0.37.0",
+    "helmet": "^8.0.0",
     "langchain": "^0.1.7",
     "mammoth": "^1.11.0",
     "multer": "^2.0.2",
@@ -42,13 +56,20 @@
     "@types/express": "^4.17.21",
     "@types/node": "^20.11.16",
     "@types/pdfkit": "^0.13.4",
+    "@types/swagger-jsdoc": "^6.0.4",
+    "@types/swagger-ui-express": "^4.1.8",
     "@types/ws": "^8.5.10",
     "@typescript-eslint/eslint-plugin": "^6.20.0",
     "@typescript-eslint/parser": "^6.20.0",
     "drizzle-kit": "^0.20.13",
     "eslint": "^8.56.0",
     "fast-check": "^3.15.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
     "postgres": "^3.4.3",
+    "prettier": "^3.8.1",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3",
     "vitest": "^1.2.2"

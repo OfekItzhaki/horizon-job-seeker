@@ -1,0 +1,43 @@
+# Dependencies
+node_modules
+npm-debug.log*
+
+# Build outputs
+dist
+coverage
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Testing
+*.test.ts
+*.test.js
+__tests__
+coverage
+
+# Development files
+*.md
+!README.md
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+
+# Logs
+*.log
+logs
+
+# Temporary files
+tmp
+temp
+
+# Scripts
+*.ps1
+*.sh
+!start-worker.ps1

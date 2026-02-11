@@ -16,7 +16,13 @@ interface Job {
 }
 
 interface AutomationUpdate {
-  type: 'automation_started' | 'automation_filling' | 'automation_paused' | 'automation_submitted' | 'automation_cancelled' | 'automation_error';
+  type:
+    | 'automation_started'
+    | 'automation_filling'
+    | 'automation_paused'
+    | 'automation_submitted'
+    | 'automation_cancelled'
+    | 'automation_error';
   automationId: string;
   jobId: number;
   message: string;
@@ -27,14 +33,16 @@ export default function Home() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'new' | 'all'>('new');
-  
+
   // Automation modal state
   const [modalOpen, setModalOpen] = useState(false);
-  const [automationStatus, setAutomationStatus] = useState<'filling' | 'paused' | 'submitted' | 'error' | null>(null);
+  const [automationStatus, setAutomationStatus] = useState<
+    'filling' | 'paused' | 'submitted' | 'error' | null
+  >(null);
   const [automationMessage, setAutomationMessage] = useState('');
   const [currentJobTitle, setCurrentJobTitle] = useState('');
   const [currentAutomationId, setCurrentAutomationId] = useState<string | null>(null);
-  
+
   const wsRef = useRef<WebSocket | null>(null);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -49,12 +57,13 @@ export default function Home() {
         wsRef.current.close();
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter]);
 
   const connectWebSocket = () => {
     try {
       const ws = new WebSocket(WS_URL);
-      
+
       ws.onopen = () => {
         console.log('WebSocket connected');
       };
@@ -62,7 +71,7 @@ export default function Home() {
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          
+
           if (data.type === 'connected') {
             console.log('WebSocket connection confirmed');
             return;
@@ -92,9 +101,9 @@ export default function Home() {
 
   const handleAutomationUpdate = (update: AutomationUpdate) => {
     console.log('Automation update:', update);
-    
+
     // Find the job
-    const job = jobs.find(j => j.id === update.jobId);
+    const job = jobs.find((j) => j.id === update.jobId);
     if (job) {
       setCurrentJobTitle(`${job.company} - ${job.title}`);
     }
@@ -137,20 +146,18 @@ export default function Home() {
   const fetchJobs = async () => {
     try {
       setLoading(true);
-      const url = filter === 'new' 
-        ? `${API_URL}/api/jobs?status=new`
-        : `${API_URL}/api/jobs`;
-      
+      const url = filter === 'new' ? `${API_URL}/api/jobs?status=new` : `${API_URL}/api/jobs`;
+
       const response = await fetch(url);
       const data = await response.json();
-      
+
       // Sort by match score descending
       const sorted = data.sort((a: Job, b: Job) => {
         if (a.matchScore === null) return 1;
         if (b.matchScore === null) return -1;
         return b.matchScore - a.matchScore;
       });
-      
+
       setJobs(sorted);
     } catch (error) {
       console.error('Error fetching jobs:', error);
@@ -170,7 +177,7 @@ export default function Home() {
 
       // Refresh jobs list
       fetchJobs();
-      
+
       alert('Job approved! You can now start automation from the approved jobs list.');
     } catch (error) {
       console.error('Error approving job:', error);
@@ -221,7 +228,7 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ automationId: currentAutomationId }),
       });
-      
+
       setModalOpen(false);
       setAutomationStatus(null);
     } catch (error) {
@@ -239,7 +246,7 @@ export default function Home() {
       await fetch(`${API_URL}/api/automation/kill`, {
         method: 'POST',
       });
-      
+
       setModalOpen(false);
       setAutomationStatus(null);
       alert('Kill switch activated - all automation stopped');
@@ -266,10 +273,8 @@ export default function Home() {
       <header className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex justify-between items-center">
-            <h1 className="text-3xl font-bold text-gray-900">
-              Job Search Agent
-            </h1>
-            <Link 
+            <h1 className="text-3xl font-bold text-gray-900">Job Search Agent</h1>
+            <Link
               href="/profile"
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
             >
@@ -349,17 +354,15 @@ export default function Home() {
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                      <h2 className="text-xl font-semibold text-gray-900">
-                        {job.title}
-                      </h2>
+                      <h2 className="text-xl font-semibold text-gray-900">{job.title}</h2>
                       {job.matchScore !== null && (
                         <span
                           className={`px-3 py-1 rounded-full text-sm font-medium ${
                             job.matchScore >= 80
                               ? 'bg-green-100 text-green-800'
                               : job.matchScore >= 60
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : 'bg-gray-100 text-gray-800'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : 'bg-gray-100 text-gray-800'
                           }`}
                         >
                           {job.matchScore}% Match
@@ -370,19 +373,17 @@ export default function Home() {
                           job.status === 'new'
                             ? 'bg-blue-100 text-blue-800'
                             : job.status === 'approved'
-                            ? 'bg-purple-100 text-purple-800'
-                            : job.status === 'applied'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-800'
+                              ? 'bg-purple-100 text-purple-800'
+                              : job.status === 'applied'
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-gray-100 text-gray-800'
                         }`}
                       >
                         {job.status}
                       </span>
                     </div>
                     <p className="text-gray-600 font-medium mb-2">{job.company}</p>
-                    <p className="text-gray-700 text-sm line-clamp-3 mb-4">
-                      {job.description}
-                    </p>
+                    <p className="text-gray-700 text-sm line-clamp-3 mb-4">{job.description}</p>
                     <a
                       href={job.jobUrl}
                       target="_blank"

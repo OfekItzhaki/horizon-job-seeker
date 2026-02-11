@@ -26,9 +26,7 @@ export default function AutomationModal({
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-gray-900">
-            Automation Status
-          </h2>
+          <h2 className="text-xl font-bold text-gray-900">Automation Status</h2>
           {status !== 'submitted' && (
             <button
               onClick={onKillSwitch}
@@ -41,11 +39,7 @@ export default function AutomationModal({
         </div>
 
         {/* Job Title */}
-        {jobTitle && (
-          <p className="text-sm text-gray-600 mb-4">
-            Job: {jobTitle}
-          </p>
-        )}
+        {jobTitle && <p className="text-sm text-gray-600 mb-4">Job: {jobTitle}</p>}
 
         {/* Status Indicator */}
         <div className="mb-6">

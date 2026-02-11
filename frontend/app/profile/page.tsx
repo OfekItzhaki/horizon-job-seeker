@@ -64,19 +64,19 @@ export default function ProfilePage() {
   const [inputMethod, setInputMethod] = useState<'resume' | 'manual'>('resume');
   const [showStructuredData, setShowStructuredData] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
   useEffect(() => {
     fetchProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchProfile = async () => {
     try {
       setLoading(true);
       const response = await fetch(`${API_URL}/api/profile`);
-      
+
       if (response.ok) {
         const data = await response.json();
         setProfile(data);
@@ -115,7 +115,10 @@ export default function ProfilePage() {
           desiredJobTitles: data.desiredJobTitles.join(', '),
         });
         setShowStructuredData(true);
-        setMessage({ type: 'success', text: 'Resume parsed successfully! Review the extracted data below.' });
+        setMessage({
+          type: 'success',
+          text: 'Resume parsed successfully! Review the extracted data below.',
+        });
       } else {
         const error = await response.json();
         setMessage({ type: 'error', text: error.error?.message || 'Failed to parse resume' });
@@ -133,7 +136,10 @@ export default function ProfilePage() {
     if (!file) return;
 
     // Validate file type
-    const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    const allowedTypes = [
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    ];
     if (!allowedTypes.includes(file.type)) {
       setMessage({ type: 'error', text: 'Please upload a PDF or DOCX file' });
       return;
@@ -167,9 +173,9 @@ export default function ProfilePage() {
           desiredJobTitles: data.desiredJobTitles.join(', '),
         });
         setShowStructuredData(true);
-        setMessage({ 
-          type: 'success', 
-          text: `File "${data.fileName}" uploaded and parsed successfully!` 
+        setMessage({
+          type: 'success',
+          text: `File "${data.fileName}" uploaded and parsed successfully!`,
         });
       } else {
         const error = await response.json();
@@ -185,7 +191,7 @@ export default function ProfilePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(profile.email)) {
@@ -310,7 +316,8 @@ export default function ProfilePage() {
                     🤖 AI-Powered Resume Parser
                   </h3>
                   <p className="text-sm text-gray-600">
-                    Upload your resume (PDF/DOCX) or paste text below, and AI will extract all your information automatically
+                    Upload your resume (PDF/DOCX) or paste text below, and AI will extract all your
+                    information automatically
                   </p>
                 </div>
               </div>
@@ -321,8 +328,18 @@ export default function ProfilePage() {
                   <label className="block">
                     <div className="flex items-center justify-center w-full px-4 py-6 border-2 border-dashed border-purple-300 rounded-lg cursor-pointer hover:border-purple-500 hover:bg-purple-50 transition">
                       <div className="text-center">
-                        <svg className="mx-auto h-12 w-12 text-purple-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                          <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        <svg
+                          className="mx-auto h-12 w-12 text-purple-400"
+                          stroke="currentColor"
+                          fill="none"
+                          viewBox="0 0 48 48"
+                        >
+                          <path
+                            d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
                         </svg>
                         <p className="mt-2 text-sm font-medium text-gray-700">
                           {selectedFile ? selectedFile.name : 'Upload PDF or DOCX'}
@@ -362,8 +379,10 @@ export default function ProfilePage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Basic Information */}
             <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-gray-900 border-b pb-2">Basic Information</h2>
-              
+              <h2 className="text-lg font-semibold text-gray-900 border-b pb-2">
+                Basic Information
+              </h2>
+
               {/* Full Name */}
               <div>
                 <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
@@ -414,7 +433,10 @@ export default function ProfilePage() {
 
                 {/* Location */}
                 <div>
-                  <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label
+                    htmlFor="location"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
                     Location
                   </label>
                   <input
@@ -431,7 +453,10 @@ export default function ProfilePage() {
               <div className="grid grid-cols-2 gap-4">
                 {/* GitHub URL */}
                 <div>
-                  <label htmlFor="githubUrl" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label
+                    htmlFor="githubUrl"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
                     GitHub URL
                   </label>
                   <input
@@ -446,7 +471,10 @@ export default function ProfilePage() {
 
                 {/* LinkedIn URL */}
                 <div>
-                  <label htmlFor="linkedinUrl" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label
+                    htmlFor="linkedinUrl"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
                     LinkedIn URL
                   </label>
                   <input
@@ -465,9 +493,12 @@ export default function ProfilePage() {
             {inputMethod === 'resume' && (
               <div className="space-y-4">
                 <h2 className="text-lg font-semibold text-gray-900 border-b pb-2">Resume Text</h2>
-                
+
                 <div>
-                  <label htmlFor="resumeText" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label
+                    htmlFor="resumeText"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
                     Paste Your Resume <span className="text-red-500">*</span>
                   </label>
                   <textarea
@@ -506,12 +537,16 @@ export default function ProfilePage() {
                   <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
                     <h3 className="font-medium text-green-900 mb-2">✓ Extracted Data:</h3>
                     <div className="text-sm text-green-800 space-y-1">
-                      <p>• Work Experience: {profile.structuredData.workExperience?.length || 0} positions</p>
+                      <p>
+                        • Work Experience: {profile.structuredData.workExperience?.length || 0}{' '}
+                        positions
+                      </p>
                       <p>• Skills: {profile.structuredData.skills?.length || 0} skills</p>
                       <p>• Education: {profile.structuredData.education?.length || 0} degrees</p>
-                      {profile.structuredData.certifications && profile.structuredData.certifications.length > 0 && (
-                        <p>• Certifications: {profile.structuredData.certifications.length}</p>
-                      )}
+                      {profile.structuredData.certifications &&
+                        profile.structuredData.certifications.length > 0 && (
+                          <p>• Certifications: {profile.structuredData.certifications.length}</p>
+                        )}
                       {profile.desiredJobTitles && (
                         <p>• Suggested Job Titles: {profile.desiredJobTitles}</p>
                       )}
@@ -524,14 +559,20 @@ export default function ProfilePage() {
             {/* Manual Input - Simplified for now */}
             {inputMethod === 'manual' && (
               <div className="space-y-4">
-                <h2 className="text-lg font-semibold text-gray-900 border-b pb-2">Resume Details</h2>
+                <h2 className="text-lg font-semibold text-gray-900 border-b pb-2">
+                  Resume Details
+                </h2>
                 <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                   <p className="text-sm text-yellow-800">
-                    💡 Tip: For now, paste your resume and use the AI parser. Full manual entry coming soon!
+                    💡 Tip: For now, paste your resume and use the AI parser. Full manual entry
+                    coming soon!
                   </p>
                 </div>
                 <div>
-                  <label htmlFor="resumeTextManual" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label
+                    htmlFor="resumeTextManual"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
                     Resume Text <span className="text-red-500">*</span>
                   </label>
                   <textarea
@@ -550,9 +591,12 @@ export default function ProfilePage() {
             {/* Job Preferences */}
             <div className="space-y-4">
               <h2 className="text-lg font-semibold text-gray-900 border-b pb-2">Job Preferences</h2>
-              
+
               <div>
-                <label htmlFor="desiredJobTitles" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="desiredJobTitles"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Desired Job Titles
                 </label>
                 <input
@@ -563,11 +607,16 @@ export default function ProfilePage() {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Senior Developer, Lead Engineer, Tech Lead"
                 />
-                <p className="mt-1 text-xs text-gray-500">Comma-separated list of job titles you're interested in</p>
+                <p className="mt-1 text-xs text-gray-500">
+                  Comma-separated list of job titles you're interested in
+                </p>
               </div>
 
               <div>
-                <label htmlFor="desiredLocations" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="desiredLocations"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Desired Locations
                 </label>
                 <input
@@ -578,7 +627,9 @@ export default function ProfilePage() {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="San Francisco, Remote, New York"
                 />
-                <p className="mt-1 text-xs text-gray-500">Comma-separated list of preferred work locations</p>
+                <p className="mt-1 text-xs text-gray-500">
+                  Comma-separated list of preferred work locations
+                </p>
               </div>
             </div>
 
