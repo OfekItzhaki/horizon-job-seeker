@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db/index.js';
 import { jobs, applicationSubmissions } from '../db/schema.js';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, gte, or, sql } from 'drizzle-orm';
 
 const router = Router();
 
@@ -49,7 +49,18 @@ router.get('/', async (req, res) => {
   try {
     const { status, minScore } = req.query;
 
+    // Calculate cutoff date (48 hours ago)
+    const cutoffDate = new Date();
+    cutoffDate.setHours(cutoffDate.getHours() - 48);
+
     let results;
+
+    // Build base query with freshness filter
+    // Show jobs that have postedAt within 48 hours OR createdAt within 48 hours (as fallback)
+    const freshnessFilter = or(
+      gte(jobs.postedAt, cutoffDate),
+      sql`${jobs.postedAt} IS NULL AND ${jobs.createdAt} >= ${cutoffDate}`
+    );
 
     // Filter by status if provided
     if (status && typeof status === 'string') {
@@ -68,10 +79,16 @@ router.get('/', async (req, res) => {
       results = await db
         .select()
         .from(jobs)
-        .where(eq(jobs.status, status as 'new' | 'rejected' | 'approved' | 'applied'))
-        .orderBy(desc(jobs.createdAt), desc(jobs.matchScore));
+        .where(
+          sql`${eq(jobs.status, status as 'new' | 'rejected' | 'approved' | 'applied')} AND (${freshnessFilter})`
+        )
+        .orderBy(desc(jobs.postedAt), desc(jobs.createdAt), desc(jobs.matchScore));
     } else {
-      results = await db.select().from(jobs).orderBy(desc(jobs.createdAt), desc(jobs.matchScore));
+      results = await db
+        .select()
+        .from(jobs)
+        .where(freshnessFilter)
+        .orderBy(desc(jobs.postedAt), desc(jobs.createdAt), desc(jobs.matchScore));
     }
 
     // Filter by minScore if provided (done in-memory since matchScore can be null)
