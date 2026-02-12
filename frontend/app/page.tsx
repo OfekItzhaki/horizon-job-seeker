@@ -148,7 +148,7 @@ export default function Home() {
     try {
       setLoading(true);
       let url;
-      
+
       if (filter === 'applied') {
         url = `${API_URL}/api/jobs/applied`;
       } else if (filter === 'new') {
@@ -291,7 +291,7 @@ export default function Home() {
 
     try {
       setRefreshing(true);
-      
+
       const response = await fetch(`${API_URL}/api/automation/scrape`, {
         method: 'POST',
       });
@@ -301,9 +301,11 @@ export default function Home() {
       }
 
       const data = await response.json();
-      
-      alert(`✓ Job scraping completed!\n\nNew jobs found: ${data.newJobsCount || 0}\nDuplicates skipped: ${data.duplicatesCount || 0}`);
-      
+
+      alert(
+        `✓ Job scraping completed!\n\nNew jobs found: ${data.newJobsCount || 0}\nDuplicates skipped: ${data.duplicatesCount || 0}`
+      );
+
       // Refresh the jobs list
       await fetchJobs();
     } catch (error) {
