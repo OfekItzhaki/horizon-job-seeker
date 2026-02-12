@@ -26,40 +26,35 @@ export class RSSJobScraper extends BaseScraper {
     const jobs: ScrapedJob[] = [];
 
     try {
-      // RSS feeds organized by region and type
+      // RSS feeds organized by activity level and region
+      // Only using the most active feeds that update daily/hourly
       const rssFeeds = [
-        // === ISRAELI JOB BOARDS ===
-        // Note: These URLs are examples - you'll need to verify actual RSS feed URLs
-        `https://www.alljobs.co.il/rss/jobs.xml`,
-        `https://www.drushim.co.il/rss/jobs.xml`,
-        `https://www.jobmaster.co.il/rss/jobs.xml`,
+        // === HIGHEST ACTIVITY FEEDS (Updated Multiple Times Daily) ===
+        // RemoteOK - Very active, updates multiple times daily with fresh jobs
+        `https://remoteok.com/remote-dev-jobs.rss`,
+        `https://remoteok.com/remote-software-engineer-jobs.rss`,
+        `https://remoteok.com/remote-full-stack-jobs.rss`,
+        `https://remoteok.com/remote-backend-jobs.rss`,
+        `https://remoteok.com/remote-frontend-jobs.rss`,
         
-        // === TECH-SPECIFIC (GLOBAL) ===
-        // Stack Overflow Jobs
-        `https://stackoverflow.com/jobs/feed?q=${encodeURIComponent(searchQuery)}`,
+        // Hacker News - Very active, updated constantly
+        `https://hnrss.org/jobs`,
         
-        // RemoteOK - supports location filtering
-        `https://remoteok.com/remote-${encodeURIComponent(searchQuery.toLowerCase().replace(/\s+/g, '-'))}-jobs.rss`,
-        
-        // We Work Remotely
+        // We Work Remotely - Active, updates daily
         `https://weworkremotely.com/categories/remote-programming-jobs.rss`,
         `https://weworkremotely.com/categories/remote-full-stack-programming-jobs.rss`,
         
-        // AngelList/Wellfound (if they have RSS)
-        // Note: AngelList may require API access instead of RSS
+        // Remotive - Active remote job board
+        `https://remotive.com/api/remote-jobs/feed`,
         
-        // === ADDITIONAL TECH SOURCES ===
-        // Hacker News Who's Hiring
-        `https://hnrss.org/jobs`,
-        
+        // === MODERATE ACTIVITY (Updated Daily) ===
         // Lobsters (tech community)
         `https://lobste.rs/t/job.rss`,
         
-        // Authentic Jobs
-        `https://authenticjobs.com/rss/custom.php?terms=${encodeURIComponent(searchQuery)}`,
-        
-        // GitHub Jobs (if still available)
-        `https://jobs.github.com/positions.rss?description=${encodeURIComponent(searchQuery)}`,
+        // Note: Removed feeds that tend to have older postings
+        // - Stack Overflow Jobs (often has old postings)
+        // - Authentic Jobs (moderate activity)
+        // - We Work Remotely back-end/front-end specific (overlap with main feed)
       ];
 
       for (const feedUrl of rssFeeds) {
@@ -69,6 +64,13 @@ export class RSSJobScraper extends BaseScraper {
           console.log(`Fetching RSS feed: ${feedUrl}`);
           const feed = await this.parser.parseURL(feedUrl);
 
+          if (!feed.items || feed.items.length === 0) {
+            console.log(`No items found in feed: ${feedUrl}`);
+            continue;
+          }
+
+          console.log(`Found ${feed.items.length} items in feed`);
+
           for (const item of feed.items) {
             if (jobs.length >= maxJobs) break;
 
@@ -77,6 +79,12 @@ export class RSSJobScraper extends BaseScraper {
             const url = item.link || item.guid || '';
             const description =
               item.contentSnippet || item.content || item.description || 'No description available';
+
+            // Skip if no URL
+            if (!url) {
+              console.log(`Skipping item with no URL: ${title}`);
+              continue;
+            }
 
             // Try to extract company name from title or content
             let company = 'Unknown Company';
@@ -94,26 +102,34 @@ export class RSSJobScraper extends BaseScraper {
               company = parenthesesMatch[1].trim();
             }
 
-            // Filter for Israeli/Tel Aviv jobs if location is mentioned
-            const hasIsraeliLocation = 
-              description.toLowerCase().includes('israel') ||
-              description.toLowerCase().includes('tel aviv') ||
-              description.toLowerCase().includes('jerusalem') ||
-              description.toLowerCase().includes('haifa') ||
-              title.toLowerCase().includes('israel') ||
-              title.toLowerCase().includes('tel aviv');
-
-            if (url && title) {
-              jobs.push({
-                url: url.trim(),
-                company: company.trim(),
-                title: title.trim(),
-                description: description.trim(),
-              });
+            // Check if job is recent (posted within last 3 days)
+            // Jobs in tech close FAST - some within hours, most within days
+            const pubDate = item.pubDate ? new Date(item.pubDate) : null;
+            if (pubDate) {
+              const daysSincePosted = (Date.now() - pubDate.getTime()) / (1000 * 60 * 60 * 24);
+              if (daysSincePosted > 3) {
+                console.log(`Skipping old job (${Math.floor(daysSincePosted)} days old): ${title}`);
+                continue;
+              }
+              const hoursOld = Math.floor((Date.now() - pubDate.getTime()) / (1000 * 60 * 60));
+              console.log(`Job age: ${hoursOld} hours (${Math.floor(daysSincePosted)} days)`);
+            } else {
+              // If no date, skip it - we only want fresh jobs
+              console.log(`No pubDate for job: ${title} - SKIPPING (we only want fresh jobs)`);
+              continue;
             }
+
+            jobs.push({
+              url: url.trim(),
+              company: company.trim(),
+              title: title.trim(),
+              description: description.trim(),
+            });
+
+            console.log(`Added job: ${title} at ${company}`);
           }
 
-          console.log(`Found ${feed.items.length} jobs from ${feedUrl}`);
+          console.log(`Processed ${feed.items.length} items from ${feedUrl}, added ${jobs.length} jobs so far`);
         } catch (error) {
           console.error(`Error fetching RSS feed ${feedUrl}:`, error);
           // Continue with next feed - don't let one failure stop everything
