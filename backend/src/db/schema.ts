@@ -21,7 +21,7 @@ export const applicationSubmissions = pgTable('application_submissions', {
   jobId: integer('job_id')
     .notNull()
     .references(() => jobs.id),
-  
+
   // Snapshot of profile data at time of submission
   fullName: text('full_name').notNull(),
   email: text('email').notNull(),
@@ -31,7 +31,7 @@ export const applicationSubmissions = pgTable('application_submissions', {
   location: text('location'),
   resumeText: text('resume_text').notNull(),
   bio: text('bio'),
-  
+
   // Submission metadata
   submittedAt: timestamp('submitted_at').notNull().defaultNow(),
   automationId: text('automation_id'), // Reference to automation session

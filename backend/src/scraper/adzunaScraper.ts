@@ -4,7 +4,7 @@ import { BaseScraper, type ScrapedJob } from './baseScraper.js';
  * Adzuna API Scraper
  * Uses Adzuna's official API (free tier: 1000 calls/month)
  * Sign up at: https://developer.adzuna.com/
- * 
+ *
  * Set environment variables:
  * ADZUNA_APP_ID=your_app_id
  * ADZUNA_API_KEY=your_api_key

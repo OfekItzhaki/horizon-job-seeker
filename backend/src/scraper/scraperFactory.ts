@@ -1,6 +1,6 @@
 /**
  * Scraper Factory
- * 
+ *
  * Dynamically creates scraper instances based on configuration.
  * This makes it easy to add/remove scrapers without changing the worker code.
  */
@@ -20,19 +20,19 @@ export function createScraper(scraperId: string): BaseScraper | null {
   switch (scraperId) {
     case 'rss':
       return new RSSJobScraper();
-    
+
     case 'linkedin-public':
       return new LinkedInPublicScraper();
-    
+
     case 'adzuna':
       return new AdzunaScraper();
-    
+
     case 'linkedin':
       return new LinkedInScraper();
-    
+
     case 'indeed':
       return new IndeedScraper();
-    
+
     default:
       console.error(`Unknown scraper ID: ${scraperId}`);
       return null;

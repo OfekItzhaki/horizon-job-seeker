@@ -1,6 +1,6 @@
 /**
  * Modular Scraper Configuration
- * 
+ *
  * This file defines all available job scrapers and their settings.
  * To enable/disable a scraper, just change the 'enabled' flag.
  * To add a new scraper, add a new entry to the config array.
@@ -75,9 +75,7 @@ export const scraperConfig: ScraperSourceConfig[] = [
  * Get enabled scrapers sorted by priority
  */
 export function getEnabledScrapers(): ScraperSourceConfig[] {
-  return scraperConfig
-    .filter((scraper) => scraper.enabled)
-    .sort((a, b) => a.priority - b.priority);
+  return scraperConfig.filter((scraper) => scraper.enabled).sort((a, b) => a.priority - b.priority);
 }
 
 /**

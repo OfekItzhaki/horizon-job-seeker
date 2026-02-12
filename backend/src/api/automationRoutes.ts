@@ -91,9 +91,9 @@ router.post('/confirm', async (req, res) => {
     const { db } = await import('../db/index.js');
     const { userProfile, applicationSubmissions, jobs } = await import('../db/schema.js');
     const { eq } = await import('drizzle-orm');
-    
+
     const [profile] = await db.select().from(userProfile).limit(1);
-    
+
     if (profile) {
       // Save submission snapshot
       await db.insert(applicationSubmissions).values({
@@ -108,7 +108,7 @@ router.post('/confirm', async (req, res) => {
         bio: profile.bio,
         automationId: automationId,
       });
-      
+
       // Update job status to applied
       await db.update(jobs).set({ status: 'applied' }).where(eq(jobs.id, session.jobId));
     }

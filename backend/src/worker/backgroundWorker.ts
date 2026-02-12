@@ -52,20 +52,24 @@ export class BackgroundWorker {
    * Run a single scrape job cycle
    * Returns statistics about the scraping run
    */
-  async runScrapeJob(): Promise<{ newJobsCount: number; duplicatesCount: number; totalScraped: number }> {
+  async runScrapeJob(): Promise<{
+    newJobsCount: number;
+    duplicatesCount: number;
+    totalScraped: number;
+  }> {
     console.log('=== Starting scrape job ===');
     const startTime = Date.now();
 
     // Get available scrapers from config
     const availableScrapers = getAvailableScrapers();
-    
+
     // Log scraper stats
     const stats = getScraperStats();
     console.log(`\nScraper Status:`);
     console.log(`  Total configured: ${stats.total}`);
     console.log(`  Enabled: ${stats.enabled}`);
     console.log(`  Available (with auth): ${stats.available}`);
-    
+
     if (stats.missingAuth.length > 0) {
       console.log(`\n  Missing auth for:`);
       stats.missingAuth.forEach((s) => {
@@ -82,8 +86,10 @@ export class BackgroundWorker {
     try {
       // Run each available scraper in priority order
       for (const scraperConfig of availableScrapers) {
-        console.log(`\n--- Scraping from ${scraperConfig.name} (priority: ${scraperConfig.priority}) ---`);
-        
+        console.log(
+          `\n--- Scraping from ${scraperConfig.name} (priority: ${scraperConfig.priority}) ---`
+        );
+
         const scraper = createScraper(scraperConfig.id);
         if (!scraper) {
           console.error(`Failed to create scraper: ${scraperConfig.id}`);
@@ -94,7 +100,10 @@ export class BackgroundWorker {
           await scraper.init();
 
           // Scrape jobs
-          const scrapedJobs = await scraper.scrapeJobs('Full Stack Developer', scraperConfig.maxJobs);
+          const scrapedJobs = await scraper.scrapeJobs(
+            'Full Stack Developer',
+            scraperConfig.maxJobs
+          );
           totalScraped += scrapedJobs.length;
 
           console.log(`Found ${scrapedJobs.length} jobs from ${scraperConfig.name}`);
@@ -122,8 +131,10 @@ export class BackgroundWorker {
 
       const duration = Date.now() - startTime;
       console.log(`\n=== Scrape job completed in ${duration}ms ===`);
-      console.log(`Stats: ${newJobsCount} new, ${duplicatesCount} duplicates, ${totalScraped} total scraped`);
-      
+      console.log(
+        `Stats: ${newJobsCount} new, ${duplicatesCount} duplicates, ${totalScraped} total scraped`
+      );
+
       return { newJobsCount, duplicatesCount, totalScraped };
     } catch (error) {
       console.error('Scrape job error:', error);

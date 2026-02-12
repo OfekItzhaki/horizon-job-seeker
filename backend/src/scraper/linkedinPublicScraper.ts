@@ -18,11 +18,7 @@ export class LinkedInPublicScraper extends BaseScraper {
 
     try {
       // Search parameters
-      const locations = [
-        'Tel Aviv, Israel',
-        'Israel',
-        'Remote',
-      ];
+      const locations = ['Tel Aviv, Israel', 'Israel', 'Remote'];
 
       // Time filters (f_TPR parameter)
       // r86400 = last 24 hours
@@ -52,7 +48,7 @@ export class LinkedInPublicScraper extends BaseScraper {
           const response = await fetch(url, {
             headers: {
               'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+              Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
               'Accept-Language': 'en-US,en;q=0.5',
             },
           });
@@ -123,7 +119,7 @@ export class LinkedInPublicScraper extends BaseScraper {
       const response = await fetch(url, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          'Accept': 'application/json',
+          Accept: 'application/json',
         },
       });
 
@@ -134,9 +130,7 @@ export class LinkedInPublicScraper extends BaseScraper {
       const html = await response.text();
 
       // Extract description from HTML
-      const descMatch = html.match(
-        /<div[^>]*class="[^"]*description[^"]*"[^>]*>(.*?)<\/div>/s
-      );
+      const descMatch = html.match(/<div[^>]*class="[^"]*description[^"]*"[^>]*>(.*?)<\/div>/s);
 
       if (descMatch) {
         return this.cleanHtml(descMatch[1]);

@@ -36,21 +36,21 @@ export class RSSJobScraper extends BaseScraper {
         `https://remoteok.com/remote-full-stack-jobs.rss`,
         `https://remoteok.com/remote-backend-jobs.rss`,
         `https://remoteok.com/remote-frontend-jobs.rss`,
-        
+
         // Hacker News - Very active, updated constantly
         `https://hnrss.org/jobs`,
-        
+
         // We Work Remotely - Active, updates daily
         `https://weworkremotely.com/categories/remote-programming-jobs.rss`,
         `https://weworkremotely.com/categories/remote-full-stack-programming-jobs.rss`,
-        
+
         // Remotive - Active remote job board
         `https://remotive.com/api/remote-jobs/feed`,
-        
+
         // === MODERATE ACTIVITY (Updated Daily) ===
         // Lobsters (tech community)
         `https://lobste.rs/t/job.rss`,
-        
+
         // Note: Removed feeds that tend to have older postings
         // - Stack Overflow Jobs (often has old postings)
         // - Authentic Jobs (moderate activity)
@@ -129,7 +129,9 @@ export class RSSJobScraper extends BaseScraper {
             console.log(`Added job: ${title} at ${company}`);
           }
 
-          console.log(`Processed ${feed.items.length} items from ${feedUrl}, added ${jobs.length} jobs so far`);
+          console.log(
+            `Processed ${feed.items.length} items from ${feedUrl}, added ${jobs.length} jobs so far`
+          );
         } catch (error) {
           console.error(`Error fetching RSS feed ${feedUrl}:`, error);
           // Continue with next feed - don't let one failure stop everything
