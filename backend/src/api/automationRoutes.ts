@@ -238,11 +238,14 @@ router.post('/scrape', async (_req, res) => {
     const worker = new BackgroundWorker();
 
     // Trigger a single scrape run
-    await worker.runScrapeJob();
+    const stats = await worker.runScrapeJob();
 
     res.json({
       success: true,
       message: 'Job scraping completed successfully',
+      newJobsCount: stats.newJobsCount,
+      duplicatesCount: stats.duplicatesCount,
+      totalScraped: stats.totalScraped,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
@@ -280,10 +283,46 @@ router.get('/sessions', (_req, res) => {
     });
   } catch (error) {
     console.error('Error fetching sessions:', error);
-    res.status(500).json({
+    res.json({
       error: {
         code: 'FETCH_SESSIONS_ERROR',
         message: 'Failed to fetch automation sessions',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        retryable: true,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  }
+});
+
+/**
+ * GET /api/automation/scrapers
+ * Get scraper configuration and status
+ */
+router.get('/scrapers', (_req, res) => {
+  try {
+    const { getScraperStats, scraperConfig } = require('../config/scraperConfig.js');
+    const stats = getScraperStats();
+
+    res.json({
+      stats,
+      scrapers: scraperConfig.map((s: any) => ({
+        id: s.id,
+        name: s.name,
+        enabled: s.enabled,
+        priority: s.priority,
+        maxJobs: s.maxJobs,
+        description: s.description,
+        requiresAuth: s.requiresAuth,
+        authEnvVars: s.authEnvVars || [],
+      })),
+    });
+  } catch (error) {
+    console.error('Error fetching scraper config:', error);
+    res.status(500).json({
+      error: {
+        code: 'FETCH_SCRAPERS_ERROR',
+        message: 'Failed to fetch scraper configuration',
         details: error instanceof Error ? error.message : 'Unknown error',
         retryable: true,
         timestamp: new Date().toISOString(),

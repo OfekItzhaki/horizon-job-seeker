@@ -1,11 +1,10 @@
-import { LinkedInScraper } from '../scraper/linkedinScraper.js';
-import { IndeedScraper } from '../scraper/indeedScraper.js';
-import { RSSJobScraper } from '../scraper/rssJobScraper.js';
 import { checkDuplicate, insertJob } from '../services/jobService.js';
 import { scoreJob } from '../services/scoringService.js';
 import { db } from '../db/index.js';
 import { userProfile } from '../db/schema.js';
-import type { ScraperConfig, ScrapedJob } from '../scraper/baseScraper.js';
+import type { ScrapedJob } from '../scraper/baseScraper.js';
+import { getAvailableScrapers, getScraperStats } from '../config/scraperConfig.js';
+import { createScraper } from '../scraper/scraperFactory.js';
 
 export class BackgroundWorker {
   private isRunning = false;
@@ -51,89 +50,99 @@ export class BackgroundWorker {
 
   /**
    * Run a single scrape job cycle
+   * Returns statistics about the scraping run
    */
-  async runScrapeJob(): Promise<void> {
+  async runScrapeJob(): Promise<{ newJobsCount: number; duplicatesCount: number; totalScraped: number }> {
     console.log('=== Starting scrape job ===');
     const startTime = Date.now();
 
-    const config: ScraperConfig = {
-      sources: ['rss', 'linkedin', 'indeed'], // RSS first (most reliable)
-      searchQuery: 'Full Stack Developer',
-      delayBetweenRequests: 30000, // 30 seconds
-      maxJobsPerRun: 10,
-    };
+    // Get available scrapers from config
+    const availableScrapers = getAvailableScrapers();
+    
+    // Log scraper stats
+    const stats = getScraperStats();
+    console.log(`\nScraper Status:`);
+    console.log(`  Total configured: ${stats.total}`);
+    console.log(`  Enabled: ${stats.enabled}`);
+    console.log(`  Available (with auth): ${stats.available}`);
+    
+    if (stats.missingAuth.length > 0) {
+      console.log(`\n  Missing auth for:`);
+      stats.missingAuth.forEach((s) => {
+        console.log(`    - ${s.name}: needs ${s.requiredEnvVars.join(', ')}`);
+      });
+    }
+
+    console.log(`\nRunning ${availableScrapers.length} scrapers:\n`);
+
+    let newJobsCount = 0;
+    let duplicatesCount = 0;
+    let totalScraped = 0;
 
     try {
-      // Scrape from RSS feeds (most reliable)
-      await this.scrapeFromSource('rss', config);
+      // Run each available scraper in priority order
+      for (const scraperConfig of availableScrapers) {
+        console.log(`\n--- Scraping from ${scraperConfig.name} (priority: ${scraperConfig.priority}) ---`);
+        
+        const scraper = createScraper(scraperConfig.id);
+        if (!scraper) {
+          console.error(`Failed to create scraper: ${scraperConfig.id}`);
+          continue;
+        }
 
-      // Optionally scrape from LinkedIn (requires auth)
-      // await this.scrapeFromSource('linkedin', config);
+        try {
+          await scraper.init();
 
-      // Optionally scrape from Indeed (has bot detection)
-      // await this.scrapeFromSource('indeed', config);
+          // Scrape jobs
+          const scrapedJobs = await scraper.scrapeJobs('Full Stack Developer', scraperConfig.maxJobs);
+          totalScraped += scrapedJobs.length;
+
+          console.log(`Found ${scrapedJobs.length} jobs from ${scraperConfig.name}`);
+
+          // Process each scraped job
+          for (const job of scrapedJobs) {
+            const result = await this.processJob(job);
+            if (result === 'new') {
+              newJobsCount++;
+            } else if (result === 'duplicate') {
+              duplicatesCount++;
+            }
+          }
+
+          console.log(`Processed ${scrapedJobs.length} jobs from ${scraperConfig.name}`);
+        } catch (error) {
+          console.error(`Error scraping from ${scraperConfig.name}:`, error);
+        } finally {
+          await scraper.close();
+        }
+
+        // Delay between scrapers to be respectful
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
 
       const duration = Date.now() - startTime;
-      console.log(`=== Scrape job completed in ${duration}ms ===`);
+      console.log(`\n=== Scrape job completed in ${duration}ms ===`);
+      console.log(`Stats: ${newJobsCount} new, ${duplicatesCount} duplicates, ${totalScraped} total scraped`);
+      
+      return { newJobsCount, duplicatesCount, totalScraped };
     } catch (error) {
       console.error('Scrape job error:', error);
-      // Continue execution - don't let one failure stop the worker
-    }
-  }
-
-  /**
-   * Scrape jobs from a specific source
-   */
-  private async scrapeFromSource(
-    source: 'rss' | 'linkedin' | 'indeed',
-    config: ScraperConfig
-  ): Promise<void> {
-    console.log(`\n--- Scraping from ${source} ---`);
-
-    let scraper;
-    try {
-      // Initialize appropriate scraper
-      if (source === 'rss') {
-        scraper = new RSSJobScraper();
-      } else if (source === 'linkedin') {
-        scraper = new LinkedInScraper();
-      } else {
-        scraper = new IndeedScraper();
-      }
-
-      await scraper.init();
-
-      // Scrape jobs
-      const scrapedJobs = await scraper.scrapeJobs(config.searchQuery, config.maxJobsPerRun);
-
-      console.log(`Found ${scrapedJobs.length} jobs from ${source}`);
-
-      // Process each scraped job
-      for (const job of scrapedJobs) {
-        await this.processJob(job);
-      }
-    } catch (error) {
-      console.error(`Error scraping from ${source}:`, error);
-      // Log error but continue - don't let one source failure stop everything
-    } finally {
-      // Always close the scraper
-      if (scraper) {
-        await scraper.close();
-      }
+      return { newJobsCount, duplicatesCount, totalScraped };
     }
   }
 
   /**
    * Process a single scraped job: check duplicates, score, and store
+   * Returns 'new' if job was added, 'duplicate' if skipped, 'error' if failed
    */
-  private async processJob(job: ScrapedJob): Promise<void> {
+  private async processJob(job: ScrapedJob): Promise<'new' | 'duplicate' | 'error'> {
     try {
       // Check for duplicates
       const isDuplicate = await checkDuplicate(job.company, job.title);
 
       if (isDuplicate) {
         console.log(`Skipping duplicate: ${job.company} - ${job.title}`);
-        return;
+        return 'duplicate';
       }
 
       console.log(`Processing new job: ${job.company} - ${job.title}`);
@@ -151,7 +160,7 @@ export class BackgroundWorker {
           matchScore: null,
           status: 'new',
         });
-        return;
+        return 'new';
       }
 
       // Score the job
@@ -174,9 +183,11 @@ export class BackgroundWorker {
       });
 
       console.log(`✓ Stored job: ${job.company} - ${job.title}`);
+      return 'new';
     } catch (error) {
       console.error(`Error processing job ${job.title}:`, error);
       // Continue with next job
+      return 'error';
     }
   }
 
