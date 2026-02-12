@@ -299,14 +299,14 @@ router.get('/sessions', (_req, res) => {
  * GET /api/automation/scrapers
  * Get scraper configuration and status
  */
-router.get('/scrapers', (_req, res) => {
+router.get('/scrapers', async (_req, res) => {
   try {
-    const { getScraperStats, scraperConfig } = require('../config/scraperConfig.js');
+    const { getScraperStats, scraperConfig } = await import('../config/scraperConfig.js');
     const stats = getScraperStats();
 
     res.json({
       stats,
-      scrapers: scraperConfig.map((s: any) => ({
+      scrapers: scraperConfig.map((s) => ({
         id: s.id,
         name: s.name,
         enabled: s.enabled,

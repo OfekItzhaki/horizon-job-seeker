@@ -67,7 +67,19 @@ export class AdzunaScraper extends BaseScraper {
             continue;
           }
 
-          const data: any = await response.json();
+          interface AdzunaJob {
+            title?: string;
+            company?: { display_name?: string };
+            description?: string;
+            redirect_url?: string;
+            created?: string;
+          }
+
+          interface AdzunaResponse {
+            results?: AdzunaJob[];
+          }
+
+          const data = (await response.json()) as AdzunaResponse;
 
           if (!data.results || data.results.length === 0) {
             console.log(`No jobs found in ${country.name}`);
