@@ -33,6 +33,7 @@ export default function Home() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'new' | 'all' | 'applied'>('new');
+  const [refreshing, setRefreshing] = useState(false);
 
   // Automation modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -264,6 +265,55 @@ export default function Home() {
     }
   };
 
+  const formatTimeAgo = (dateString: string): string => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffMinutes < 60) {
+      return `${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''} ago`;
+    } else if (diffHours < 24) {
+      return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+    } else {
+      return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+    }
+  };
+
+  const handleRefreshJobs = async () => {
+    if (refreshing) return;
+
+    if (!confirm('This will scrape new jobs from RSS feeds. It may take 1-2 minutes. Continue?')) {
+      return;
+    }
+
+    try {
+      setRefreshing(true);
+      
+      const response = await fetch(`${API_URL}/api/automation/scrape`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to trigger job scraping');
+      }
+
+      const data = await response.json();
+      
+      alert(`✓ Job scraping completed!\n\nNew jobs found: ${data.newJobsCount || 0}\nDuplicates skipped: ${data.duplicatesCount || 0}`);
+      
+      // Refresh the jobs list
+      await fetchJobs();
+    } catch (error) {
+      console.error('Error refreshing jobs:', error);
+      alert('Failed to refresh jobs. Please try again.');
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Automation Modal */}
@@ -282,12 +332,47 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex justify-between items-center">
             <h1 className="text-3xl font-bold text-gray-900">Job Search Agent</h1>
-            <Link
-              href="/profile"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-            >
-              My Profile
-            </Link>
+            <div className="flex gap-3">
+              <button
+                onClick={handleRefreshJobs}
+                disabled={refreshing}
+                className={`px-4 py-2 rounded-lg transition font-medium ${
+                  refreshing
+                    ? 'bg-gray-400 text-white cursor-not-allowed'
+                    : 'bg-green-600 text-white hover:bg-green-700'
+                }`}
+              >
+                {refreshing ? (
+                  <span className="flex items-center gap-2">
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                        fill="none"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      />
+                    </svg>
+                    Refreshing...
+                  </span>
+                ) : (
+                  '🔄 Refresh Jobs'
+                )}
+              </button>
+              <Link
+                href="/profile"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+              >
+                My Profile
+              </Link>
+            </div>
           </div>
         </div>
       </header>
@@ -401,6 +486,9 @@ export default function Home() {
                       </span>
                     </div>
                     <p className="text-gray-600 font-medium mb-2">{job.company}</p>
+                    <p className="text-gray-500 text-xs mb-2">
+                      Posted {formatTimeAgo(job.createdAt)}
+                    </p>
                     <p className="text-gray-700 text-sm line-clamp-3 mb-4">{job.description}</p>
                     <a
                       href={job.jobUrl}
