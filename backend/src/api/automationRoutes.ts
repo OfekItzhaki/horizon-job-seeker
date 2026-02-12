@@ -331,4 +331,40 @@ router.get('/scrapers', async (_req, res) => {
   }
 });
 
+/**
+ * POST /api/automation/cleanup
+ * Clean up old jobs from the database
+ * Query params:
+ *   - daysToKeep: Number of days to keep (default: 7)
+ */
+router.post('/cleanup', async (req, res) => {
+  try {
+    console.log('🧹 Manual cleanup triggered via API');
+
+    const daysToKeep = parseInt(req.query.daysToKeep as string) || 7;
+
+    const { cleanupOldJobs } = await import('../utils/cleanupOldJobs.js');
+    const deletedCount = await cleanupOldJobs(daysToKeep);
+
+    res.json({
+      success: true,
+      message: `Cleaned up ${deletedCount} old jobs`,
+      deletedCount,
+      daysToKeep,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('Error running cleanup:', error);
+    res.status(500).json({
+      error: {
+        code: 'CLEANUP_ERROR',
+        message: 'Failed to clean up old jobs',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        retryable: true,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  }
+});
+
 export default router;

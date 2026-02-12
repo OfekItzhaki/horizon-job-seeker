@@ -135,6 +135,17 @@ export class BackgroundWorker {
         `Stats: ${newJobsCount} new, ${duplicatesCount} duplicates, ${totalScraped} total scraped`
       );
 
+      // Clean up old jobs (keep last 7 days)
+      try {
+        console.log('\n🧹 Cleaning up old jobs...');
+        const { cleanupOldJobs } = await import('../utils/cleanupOldJobs.js');
+        const deletedCount = await cleanupOldJobs(7);
+        console.log(`✓ Cleaned up ${deletedCount} old jobs`);
+      } catch (error) {
+        console.error('Error during cleanup:', error);
+        // Don't fail the scrape job if cleanup fails
+      }
+
       return { newJobsCount, duplicatesCount, totalScraped };
     } catch (error) {
       console.error('Scrape job error:', error);
