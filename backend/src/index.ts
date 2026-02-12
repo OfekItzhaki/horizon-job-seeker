@@ -21,15 +21,12 @@ import profileRoutes from './api/profileRoutes.js';
 import jobRoutes from './api/jobRoutes.js';
 import automationRoutes from './api/automationRoutes.js';
 import { wsManager } from './websocket/websocketServer.js';
+import { logger } from './utils/logger.js';
+import { env } from './utils/env.js';
+import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 
 const app = express();
-const PORT = process.env.PORT || 3001;
-
-// Debug: Log environment variables
-console.log('Environment check:');
-console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'Set' : 'NOT SET');
-console.log('OPENAI_API_KEY:', process.env.OPENAI_API_KEY ? 'Set' : 'NOT SET');
-console.log('PORT:', process.env.PORT);
+const PORT = env.PORT;
 
 // Security headers with Helmet
 app.use(
@@ -61,7 +58,7 @@ app.use(express.json());
  *   get:
  *     summary: Health check endpoint
  *     tags: [Health]
- *     description: Returns the health status of the API
+ *     description: Returns the health status of the API and its dependencies
  *     responses:
  *       200:
  *         description: API is healthy
@@ -77,9 +74,54 @@ app.use(express.json());
  *                   type: string
  *                   format: date-time
  *                   example: 2026-02-11T12:00:00.000Z
+ *                 version:
+ *                   type: string
+ *                   example: 0.1.0
+ *                 environment:
+ *                   type: string
+ *                   example: development
+ *                 services:
+ *                   type: object
+ *                   properties:
+ *                     database:
+ *                       type: string
+ *                       example: connected
+ *                     ai:
+ *                       type: string
+ *                       example: configured
  */
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+app.get('/health', async (_req, res) => {
+  try {
+    // Check database connection
+    const { db } = await import('./db/index.js');
+    const { sql } = await import('drizzle-orm');
+    await db.execute(sql`SELECT 1`);
+
+    res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      version: '0.1.0',
+      environment: env.NODE_ENV,
+      services: {
+        database: 'connected',
+        ai: env.GROQ_API_KEY || env.OPENAI_API_KEY ? 'configured' : 'not configured',
+        scrapers: {
+          adzuna: env.ADZUNA_APP_ID && env.ADZUNA_API_KEY ? 'configured' : 'not configured',
+          linkedin: 'public API',
+          rss: 'active',
+        },
+      },
+    });
+  } catch (error) {
+    logger.error('Health check failed', error);
+    res.status(503).json({
+      status: 'error',
+      timestamp: new Date().toISOString(),
+      version: '0.1.0',
+      environment: env.NODE_ENV,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
 });
 
 // Swagger API documentation
@@ -103,26 +145,26 @@ app.use('/api/profile', profileRoutes);
 app.use('/api/jobs', jobRoutes);
 app.use('/api/automation', automationRoutes);
 
+// 404 handler for undefined routes
+app.use(notFoundHandler);
+
+// Global error handler (must be last)
+app.use(errorHandler);
+
 // Create HTTP server and initialize WebSocket
 const server = createServer(app);
 wsManager.initialize(server);
 
 server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`WebSocket server running on ws://localhost:${PORT}/ws`);
-  console.log(`API Documentation: http://localhost:${PORT}/api-docs`);
-  console.log(`API endpoints:`);
-  console.log(`  - GET  /health`);
-  console.log(`  - GET  /api-docs (Swagger UI)`);
-  console.log(`  - GET  /api-docs.json (OpenAPI spec)`);
-  console.log(`  - GET  /api/profile`);
-  console.log(`  - PUT  /api/profile`);
-  console.log(`  - GET  /api/jobs`);
-  console.log(`  - PATCH /api/jobs/:id/status`);
-  console.log(`  - POST /api/jobs/:id/apply`);
-  console.log(`  - POST /api/automation/start`);
-  console.log(`  - POST /api/automation/confirm`);
-  console.log(`  - POST /api/automation/cancel`);
-  console.log(`  - POST /api/automation/kill`);
-  console.log(`  - GET  /api/automation/sessions`);
+  logger.info(`Server running on port ${PORT}`);
+  logger.info(`Environment: ${env.NODE_ENV}`);
+  logger.info(`WebSocket server running on ws://localhost:${PORT}/ws`);
+  logger.info(`API Documentation: http://localhost:${PORT}/api-docs`);
+  logger.debug('Available endpoints:', {
+    health: 'GET /health',
+    docs: 'GET /api-docs',
+    profile: 'GET/PUT /api/profile',
+    jobs: 'GET /api/jobs',
+    automation: 'POST /api/automation/*',
+  });
 });
