@@ -38,6 +38,28 @@ export const applicationSubmissions = pgTable('application_submissions', {
   automationId: text('automation_id'), // Reference to automation session
 });
 
+// Application submissions table - stores snapshot of data sent with each application
+export const applicationSubmissions = pgTable('application_submissions', {
+  id: serial('id').primaryKey(),
+  jobId: integer('job_id')
+    .notNull()
+    .references(() => jobs.id),
+
+  // Snapshot of profile data at time of submission
+  fullName: text('full_name').notNull(),
+  email: text('email').notNull(),
+  phone: text('phone'),
+  githubUrl: text('github_url'),
+  linkedinUrl: text('linkedin_url'),
+  location: text('location'),
+  resumeText: text('resume_text').notNull(),
+  bio: text('bio'),
+
+  // Submission metadata
+  submittedAt: timestamp('submitted_at').notNull().defaultNow(),
+  automationId: text('automation_id'), // Reference to automation session
+});
+
 // User profile table
 export const userProfile = pgTable('user_profile', {
   id: serial('id').primaryKey(),
