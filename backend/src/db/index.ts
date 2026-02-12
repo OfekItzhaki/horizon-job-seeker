@@ -43,7 +43,7 @@ export const migrationClient = new Proxy({} as ReturnType<typeof postgres>, {
   get(_target, prop) {
     return getMigrationClient()[prop as keyof ReturnType<typeof postgres>];
   },
-  apply(_target, _thisArg, args: unknown[]) {
+  apply(_target, _thisArg: unknown, args: unknown[]) {
     const client = getMigrationClient();
     return (client as unknown as (...args: unknown[]) => unknown)(...args);
   },

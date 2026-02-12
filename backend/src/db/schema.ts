@@ -15,6 +15,28 @@ export const jobs = pgTable('jobs', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
+// Application submissions table - stores snapshot of data sent with each application
+export const applicationSubmissions = pgTable('application_submissions', {
+  id: serial('id').primaryKey(),
+  jobId: integer('job_id')
+    .notNull()
+    .references(() => jobs.id),
+
+  // Snapshot of profile data at time of submission
+  fullName: text('full_name').notNull(),
+  email: text('email').notNull(),
+  phone: text('phone'),
+  githubUrl: text('github_url'),
+  linkedinUrl: text('linkedin_url'),
+  location: text('location'),
+  resumeText: text('resume_text').notNull(),
+  bio: text('bio'),
+
+  // Submission metadata
+  submittedAt: timestamp('submitted_at').notNull().defaultNow(),
+  automationId: text('automation_id'), // Reference to automation session
+});
+
 // User profile table
 export const userProfile = pgTable('user_profile', {
   id: serial('id').primaryKey(),
@@ -75,5 +97,7 @@ export interface StructuredProfileData {
 // Types
 export type Job = typeof jobs.$inferSelect;
 export type NewJob = typeof jobs.$inferInsert;
+export type ApplicationSubmission = typeof applicationSubmissions.$inferSelect;
+export type NewApplicationSubmission = typeof applicationSubmissions.$inferInsert;
 export type UserProfile = typeof userProfile.$inferSelect;
 export type NewUserProfile = typeof userProfile.$inferInsert;

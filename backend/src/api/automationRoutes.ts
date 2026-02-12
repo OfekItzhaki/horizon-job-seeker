@@ -87,6 +87,32 @@ router.post('/confirm', async (req, res) => {
       });
     }
 
+    // Get user profile to save submission snapshot
+    const { db } = await import('../db/index.js');
+    const { userProfile, applicationSubmissions, jobs } = await import('../db/schema.js');
+    const { eq } = await import('drizzle-orm');
+
+    const [profile] = await db.select().from(userProfile).limit(1);
+
+    if (profile) {
+      // Save submission snapshot
+      await db.insert(applicationSubmissions).values({
+        jobId: session.jobId,
+        fullName: profile.fullName,
+        email: profile.email,
+        phone: profile.phone,
+        githubUrl: profile.githubUrl,
+        linkedinUrl: profile.linkedinUrl,
+        location: profile.location,
+        resumeText: profile.resumeText,
+        bio: profile.bio,
+        automationId: automationId,
+      });
+
+      // Update job status to applied
+      await db.update(jobs).set({ status: 'applied' }).where(eq(jobs.id, session.jobId));
+    }
+
     // Confirm submission
     await automationEngine.confirmSubmission(automationId);
 
@@ -212,11 +238,14 @@ router.post('/scrape', async (_req, res) => {
     const worker = new BackgroundWorker();
 
     // Trigger a single scrape run
-    await worker.runScrapeJob();
+    const stats = await worker.runScrapeJob();
 
     res.json({
       success: true,
       message: 'Job scraping completed successfully',
+      newJobsCount: stats.newJobsCount,
+      duplicatesCount: stats.duplicatesCount,
+      totalScraped: stats.totalScraped,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
@@ -254,10 +283,46 @@ router.get('/sessions', (_req, res) => {
     });
   } catch (error) {
     console.error('Error fetching sessions:', error);
-    res.status(500).json({
+    res.json({
       error: {
         code: 'FETCH_SESSIONS_ERROR',
         message: 'Failed to fetch automation sessions',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        retryable: true,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  }
+});
+
+/**
+ * GET /api/automation/scrapers
+ * Get scraper configuration and status
+ */
+router.get('/scrapers', async (_req, res) => {
+  try {
+    const { getScraperStats, scraperConfig } = await import('../config/scraperConfig.js');
+    const stats = getScraperStats();
+
+    res.json({
+      stats,
+      scrapers: scraperConfig.map((s) => ({
+        id: s.id,
+        name: s.name,
+        enabled: s.enabled,
+        priority: s.priority,
+        maxJobs: s.maxJobs,
+        description: s.description,
+        requiresAuth: s.requiresAuth,
+        authEnvVars: s.authEnvVars || [],
+      })),
+    });
+  } catch (error) {
+    console.error('Error fetching scraper config:', error);
+    res.status(500).json({
+      error: {
+        code: 'FETCH_SCRAPERS_ERROR',
+        message: 'Failed to fetch scraper configuration',
         details: error instanceof Error ? error.message : 'Unknown error',
         retryable: true,
         timestamp: new Date().toISOString(),

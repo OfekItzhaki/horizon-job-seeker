@@ -9,6 +9,7 @@
     "start": "node dist/index.js",
     "start:production": "node start-production.js",
     "worker": "tsx src/worker/index.ts",
+    "scrape": "tsx trigger-scraper.ts",
     "test": "vitest",
     "test:db": "vitest run src/db/schema.test.ts",
     "lint": "eslint . --ext .ts",
