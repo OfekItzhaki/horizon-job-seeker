@@ -35,9 +35,9 @@ export const scraperConfig: ScraperSourceConfig[] = [
     id: 'adzuna',
     name: 'Adzuna API',
     enabled: true,
-    priority: 2, // Second priority - fresh jobs (3 days) from multiple sources
+    priority: 2, // Second priority - fresh jobs (24 hours) from multiple sources
     maxJobs: 100,
-    description: 'Adzuna official API - aggregates jobs from 20+ sources',
+    description: 'Adzuna official API - aggregates jobs from 20+ sources, last 24 hours',
     requiresAuth: true,
     authEnvVars: ['ADZUNA_APP_ID', 'ADZUNA_API_KEY'],
   },
@@ -47,7 +47,7 @@ export const scraperConfig: ScraperSourceConfig[] = [
     enabled: true,
     priority: 3, // Third priority - fallback
     maxJobs: 50,
-    description: 'RSS feeds from RemoteOK, Hacker News, We Work Remotely',
+    description: 'RSS feeds from RemoteOK, Hacker News, We Work Remotely - last 24 hours',
     requiresAuth: false,
   },
   {

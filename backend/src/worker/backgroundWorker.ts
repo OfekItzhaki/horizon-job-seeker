@@ -170,6 +170,7 @@ export class BackgroundWorker {
           description: job.description,
           matchScore: null,
           status: 'new',
+          postedAt: job.postedAt || null,
         });
         return 'new';
       }
@@ -191,6 +192,7 @@ export class BackgroundWorker {
         description: job.description,
         matchScore: score,
         status: 'new',
+        postedAt: job.postedAt || null,
       });
 
       console.log(`✓ Stored job: ${job.company} - ${job.title}`);

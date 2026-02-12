@@ -54,7 +54,7 @@ export class AdzunaScraper extends BaseScraper {
             app_key: this.apiKey,
             results_per_page: '50',
             what: searchQuery,
-            max_days_old: '3', // Only jobs from last 3 days
+            max_days_old: '1', // Only jobs from last 24 hours
             sort_by: 'date', // Most recent first
           });
 
@@ -107,9 +107,9 @@ export class AdzunaScraper extends BaseScraper {
             // Check job age
             const createdDate = job.created ? new Date(job.created) : null;
             if (createdDate) {
-              const daysOld = (Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24);
-              if (daysOld > 3) {
-                console.log(`Skipping old job (${Math.floor(daysOld)} days): ${title}`);
+              const hoursOld = (Date.now() - createdDate.getTime()) / (1000 * 60 * 60);
+              if (hoursOld > 24) {
+                console.log(`Skipping old job (${Math.floor(hoursOld)} hours): ${title}`);
                 continue;
               }
             }
@@ -119,6 +119,7 @@ export class AdzunaScraper extends BaseScraper {
               company: company,
               title: title,
               description: description,
+              postedAt: createdDate || undefined,
             });
 
             console.log(`Added Adzuna job: ${title} at ${company}`);

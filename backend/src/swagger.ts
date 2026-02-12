@@ -18,12 +18,9 @@ const options: swaggerJsdoc.Options = {
     },
     servers: [
       {
-        url: 'http://localhost:3001',
-        description: 'Development server',
-      },
-      {
-        url: 'https://api.horizon-job-filer.com',
-        description: 'Production server',
+        url: process.env.BACKEND_URL || 'http://localhost:3001',
+        description:
+          process.env.NODE_ENV === 'production' ? 'Production server' : 'Development server',
       },
     ],
     components: {

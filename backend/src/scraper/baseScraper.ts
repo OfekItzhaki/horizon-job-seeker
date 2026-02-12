@@ -5,6 +5,7 @@ export interface ScrapedJob {
   company: string;
   title: string;
   description: string;
+  postedAt?: Date; // When the job was originally posted
 }
 
 export interface ScraperConfig {
