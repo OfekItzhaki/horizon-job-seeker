@@ -70,7 +70,7 @@ router.get('/', async (req, res) => {
       }
 
       // For 'applied' and 'rejected' jobs, show all regardless of age
-      // For 'new' and 'approved', only show jobs from last 48 hours
+      // For 'new' and 'approved', only show jobs from last 24 hours (STRICTER)
       if (status === 'applied' || status === 'rejected') {
         results = await db
           .select()
@@ -78,9 +78,9 @@ router.get('/', async (req, res) => {
           .where(eq(jobs.status, status as 'applied' | 'rejected'))
           .orderBy(sortByDate, desc(jobs.matchScore));
       } else {
-        // Calculate cutoff date (48 hours ago) for new/approved jobs
+        // Calculate cutoff date (24 hours ago) for new/approved jobs - STRICTER
         const cutoffDate = new Date();
-        cutoffDate.setHours(cutoffDate.getHours() - 48);
+        cutoffDate.setHours(cutoffDate.getHours() - 24);
 
         const freshnessFilter = or(
           gte(jobs.postedAt, cutoffDate),
@@ -94,9 +94,9 @@ router.get('/', async (req, res) => {
           .orderBy(sortByDate, desc(jobs.matchScore));
       }
     } else {
-      // No status filter - show only fresh jobs (new/approved from last 48 hours)
+      // No status filter - show only fresh jobs (new/approved from last 24 hours)
       const cutoffDate = new Date();
-      cutoffDate.setHours(cutoffDate.getHours() - 48);
+      cutoffDate.setHours(cutoffDate.getHours() - 24);
 
       const freshnessFilter = or(
         gte(jobs.postedAt, cutoffDate),
