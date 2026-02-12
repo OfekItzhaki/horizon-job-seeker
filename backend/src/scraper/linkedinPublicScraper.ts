@@ -76,14 +76,15 @@ export class LinkedInPublicScraper extends BaseScraper {
             // Build job URL
             const jobUrl = `https://www.linkedin.com/jobs/view/${jobId}`;
 
-            // Fetch job description
-            const description = await this.fetchJobDescription(jobId);
+            // Fetch job description and posting date
+            const jobDetails = await this.fetchJobDescription(jobId);
 
             jobs.push({
               url: jobUrl,
               company: company,
               title: title,
-              description: description || 'No description available',
+              description: jobDetails.description || 'No description available',
+              postedAt: jobDetails.postedAt,
             });
 
             console.log(`Added LinkedIn job: ${title} at ${company}`);
@@ -112,7 +113,9 @@ export class LinkedInPublicScraper extends BaseScraper {
   /**
    * Fetch job description from LinkedIn
    */
-  private async fetchJobDescription(jobId: string): Promise<string | null> {
+  private async fetchJobDescription(
+    jobId: string
+  ): Promise<{ description: string | null; postedAt: Date | undefined }> {
     try {
       const url = `https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/${jobId}`;
 
@@ -124,7 +127,7 @@ export class LinkedInPublicScraper extends BaseScraper {
       });
 
       if (!response.ok) {
-        return null;
+        return { description: null, postedAt: undefined };
       }
 
       const html = await response.text();
@@ -132,15 +135,57 @@ export class LinkedInPublicScraper extends BaseScraper {
       // Extract description from HTML
       const descMatch = html.match(/<div[^>]*class="[^"]*description[^"]*"[^>]*>(.*?)<\/div>/s);
 
-      if (descMatch) {
-        return this.cleanHtml(descMatch[1]);
-      }
+      const description = descMatch ? this.cleanHtml(descMatch[1]) : null;
 
-      return null;
+      // Extract posting date
+      const postedAt = this.extractPostedDate(html);
+
+      return { description, postedAt };
     } catch (error) {
       console.error(`Error fetching description for job ${jobId}:`, error);
-      return null;
+      return { description: null, postedAt: undefined };
     }
+  }
+
+  /**
+   * Extract posting date from HTML
+   * Looks for patterns like "Posted 2 days ago", "Posted 1 hour ago", etc.
+   */
+  private extractPostedDate(html: string): Date | undefined {
+    // Common patterns in LinkedIn HTML
+    const patterns = [
+      /Posted\s+(\d+)\s+hour[s]?\s+ago/i,
+      /Posted\s+(\d+)\s+day[s]?\s+ago/i,
+      /Posted\s+(\d+)\s+week[s]?\s+ago/i,
+      /Posted\s+(\d+)\s+month[s]?\s+ago/i,
+      /(\d+)h\s+ago/i, // Short format
+      /(\d+)d\s+ago/i,
+      /(\d+)w\s+ago/i,
+    ];
+
+    for (const pattern of patterns) {
+      const match = html.match(pattern);
+      if (match) {
+        const value = parseInt(match[1], 10);
+        const now = new Date();
+
+        if (pattern.source.includes('hour')) {
+          now.setHours(now.getHours() - value);
+          return now;
+        } else if (pattern.source.includes('day') || pattern.source.includes('d\\s')) {
+          now.setDate(now.getDate() - value);
+          return now;
+        } else if (pattern.source.includes('week') || pattern.source.includes('w\\s')) {
+          now.setDate(now.getDate() - value * 7);
+          return now;
+        } else if (pattern.source.includes('month')) {
+          now.setMonth(now.getMonth() - value);
+          return now;
+        }
+      }
+    }
+
+    return undefined;
   }
 
   /**

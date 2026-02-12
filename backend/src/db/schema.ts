@@ -12,7 +12,8 @@ export const jobs = pgTable('jobs', {
   description: text('description').notNull(),
   matchScore: integer('match_score'),
   status: jobStatusEnum('status').notNull().default('new'),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
+  postedAt: timestamp('posted_at'), // When the job was originally posted by the company
+  createdAt: timestamp('created_at').notNull().defaultNow(), // When we scraped it
 });
 
 // Application submissions table - stores snapshot of data sent with each application

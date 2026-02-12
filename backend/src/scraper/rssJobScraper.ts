@@ -124,6 +124,7 @@ export class RSSJobScraper extends BaseScraper {
               company: company.trim(),
               title: title.trim(),
               description: description.trim(),
+              postedAt: pubDate, // Store the actual posting date
             });
 
             console.log(`Added job: ${title} at ${company}`);

@@ -12,6 +12,7 @@ interface Job {
   description: string;
   matchScore: number | null;
   status: 'new' | 'rejected' | 'approved' | 'applied';
+  postedAt: string | null;
   createdAt: string;
 }
 
@@ -489,7 +490,9 @@ export default function Home() {
                     </div>
                     <p className="text-gray-600 font-medium mb-2">{job.company}</p>
                     <p className="text-gray-500 text-xs mb-2">
-                      Posted {formatTimeAgo(job.createdAt)}
+                      {job.postedAt
+                        ? `Posted ${formatTimeAgo(job.postedAt)}`
+                        : `Scraped ${formatTimeAgo(job.createdAt)}`}
                     </p>
                     <p className="text-gray-700 text-sm line-clamp-3 mb-4">{job.description}</p>
                     <a

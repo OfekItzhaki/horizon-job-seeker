@@ -119,6 +119,7 @@ export class AdzunaScraper extends BaseScraper {
               company: company,
               title: title,
               description: description,
+              postedAt: createdDate || undefined,
             });
 
             console.log(`Added Adzuna job: ${title} at ${company}`);

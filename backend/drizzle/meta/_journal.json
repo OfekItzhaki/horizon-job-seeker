@@ -22,6 +22,20 @@
       "when": 1770802202501,
       "tag": "0002_friendly_iron_fist",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1770850000000,
+      "tag": "0003_add_application_submissions",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1770900000000,
+      "tag": "0004_add_posted_at",
+      "breakpoints": true
     }
   ]
 }
