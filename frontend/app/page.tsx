@@ -286,16 +286,27 @@ export default function Home() {
   const handleRefreshJobs = async () => {
     if (refreshing) return;
 
-    if (!confirm('This will scrape new jobs from RSS feeds. It may take 1-2 minutes. Continue?')) {
+    if (
+      !confirm(
+        'This will scrape new jobs from multiple sources. It may take 1-2 minutes. Continue?'
+      )
+    ) {
       return;
     }
 
     try {
       setRefreshing(true);
 
+      // Set a 3-minute timeout for the request
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minutes
+
       const response = await fetch(`${API_URL}/api/automation/scrape`, {
         method: 'POST',
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error('Failed to trigger job scraping');
@@ -304,14 +315,20 @@ export default function Home() {
       const data = await response.json();
 
       alert(
-        `✓ Job scraping completed!\n\nNew jobs found: ${data.newJobsCount || 0}\nDuplicates skipped: ${data.duplicatesCount || 0}`
+        `✓ Job scraping completed!\n\nNew jobs found: ${data.newJobsCount || 0}\nDuplicates skipped: ${data.duplicatesCount || 0}\nTotal scraped: ${data.totalScraped || 0}`
       );
 
       // Refresh the jobs list
       await fetchJobs();
     } catch (error) {
       console.error('Error refreshing jobs:', error);
-      alert('Failed to refresh jobs. Please try again.');
+      if (error instanceof Error && error.name === 'AbortError') {
+        alert(
+          'Job scraping timed out. The scraping may still be running in the background. Please wait a moment and refresh the page.'
+        );
+      } else {
+        alert('Failed to refresh jobs. Please try again.');
+      }
     } finally {
       setRefreshing(false);
     }

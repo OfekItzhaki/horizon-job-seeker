@@ -102,17 +102,18 @@ export class RSSJobScraper extends BaseScraper {
               company = parenthesesMatch[1].trim();
             }
 
-            // Check if job is recent (posted within last 3 days)
-            // Jobs in tech close FAST - some within hours, most within days
+            // Check if job is recent (posted within last 24 hours)
+            // Jobs in tech close FAST - some within hours
             const pubDate = item.pubDate ? new Date(item.pubDate) : null;
             if (pubDate) {
-              const daysSincePosted = (Date.now() - pubDate.getTime()) / (1000 * 60 * 60 * 24);
-              if (daysSincePosted > 3) {
-                console.log(`Skipping old job (${Math.floor(daysSincePosted)} days old): ${title}`);
+              const hoursSincePosted = (Date.now() - pubDate.getTime()) / (1000 * 60 * 60);
+              if (hoursSincePosted > 24) {
+                console.log(
+                  `Skipping old job (${Math.floor(hoursSincePosted)} hours old): ${title}`
+                );
                 continue;
               }
-              const hoursOld = Math.floor((Date.now() - pubDate.getTime()) / (1000 * 60 * 60));
-              console.log(`Job age: ${hoursOld} hours (${Math.floor(daysSincePosted)} days)`);
+              console.log(`Job age: ${Math.floor(hoursSincePosted)} hours`);
             } else {
               // If no date, skip it - we only want fresh jobs
               console.log(`No pubDate for job: ${title} - SKIPPING (we only want fresh jobs)`);
