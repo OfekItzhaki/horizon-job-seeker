@@ -49,18 +49,10 @@ router.get('/', async (req, res) => {
   try {
     const { status, minScore } = req.query;
 
-    // Calculate cutoff date (48 hours ago)
-    const cutoffDate = new Date();
-    cutoffDate.setHours(cutoffDate.getHours() - 48);
-
     let results;
 
-    // Build base query with freshness filter
-    // Show jobs that have postedAt within 48 hours OR createdAt within 48 hours (as fallback)
-    const freshnessFilter = or(
-      gte(jobs.postedAt, cutoffDate),
-      sql`${jobs.postedAt} IS NULL AND ${jobs.createdAt} >= ${cutoffDate}`
-    );
+    // Sort by postedAt if available, otherwise createdAt (COALESCE handles NULL)
+    const sortByDate = sql`COALESCE(${jobs.postedAt}, ${jobs.createdAt}) DESC NULLS LAST`;
 
     // Filter by status if provided
     if (status && typeof status === 'string') {
@@ -76,19 +68,46 @@ router.get('/', async (req, res) => {
         });
         return;
       }
-      results = await db
-        .select()
-        .from(jobs)
-        .where(
-          sql`${eq(jobs.status, status as 'new' | 'rejected' | 'approved' | 'applied')} AND (${freshnessFilter})`
-        )
-        .orderBy(desc(jobs.postedAt), desc(jobs.createdAt), desc(jobs.matchScore));
+
+      // For 'applied' and 'rejected' jobs, show all regardless of age
+      // For 'new' and 'approved', only show jobs from last 24 hours (STRICTER)
+      if (status === 'applied' || status === 'rejected') {
+        results = await db
+          .select()
+          .from(jobs)
+          .where(eq(jobs.status, status as 'applied' | 'rejected'))
+          .orderBy(sortByDate, desc(jobs.matchScore));
+      } else {
+        // Calculate cutoff date (24 hours ago) for new/approved jobs - STRICTER
+        const cutoffDate = new Date();
+        cutoffDate.setHours(cutoffDate.getHours() - 24);
+
+        const freshnessFilter = or(
+          gte(jobs.postedAt, cutoffDate),
+          sql`${jobs.postedAt} IS NULL AND ${jobs.createdAt} >= ${cutoffDate}`
+        );
+
+        results = await db
+          .select()
+          .from(jobs)
+          .where(sql`${eq(jobs.status, status as 'new' | 'approved')} AND (${freshnessFilter})`)
+          .orderBy(sortByDate, desc(jobs.matchScore));
+      }
     } else {
+      // No status filter - show only fresh jobs (new/approved from last 24 hours)
+      const cutoffDate = new Date();
+      cutoffDate.setHours(cutoffDate.getHours() - 24);
+
+      const freshnessFilter = or(
+        gte(jobs.postedAt, cutoffDate),
+        sql`${jobs.postedAt} IS NULL AND ${jobs.createdAt} >= ${cutoffDate}`
+      );
+
       results = await db
         .select()
         .from(jobs)
         .where(freshnessFilter)
-        .orderBy(desc(jobs.postedAt), desc(jobs.createdAt), desc(jobs.matchScore));
+        .orderBy(sortByDate, desc(jobs.matchScore));
     }
 
     // Filter by minScore if provided (done in-memory since matchScore can be null)
