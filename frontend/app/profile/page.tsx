@@ -65,7 +65,11 @@ export default function ProfilePage() {
   const [showStructuredData, setShowStructuredData] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  const API_URL =
+    process.env.NEXT_PUBLIC_API_URL ||
+    (typeof window !== 'undefined' && window.location.hostname !== 'localhost'
+      ? 'https://horizon-job-filer.onrender.com'
+      : 'http://localhost:3001');
 
   useEffect(() => {
     fetchProfile();
