@@ -47,8 +47,14 @@ export default function Home() {
 
   const wsRef = useRef<WebSocket | null>(null);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-  const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001/ws';
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 
+    (typeof window !== 'undefined' && window.location.hostname !== 'localhost' 
+      ? 'https://horizon-job-filer.onrender.com' 
+      : 'http://localhost:3001');
+  const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 
+    (typeof window !== 'undefined' && window.location.hostname !== 'localhost'
+      ? 'wss://horizon-job-filer.onrender.com/ws'
+      : 'ws://localhost:3001/ws');
 
   useEffect(() => {
     fetchJobs();
