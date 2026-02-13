@@ -177,7 +177,30 @@ export default function Home() {
   };
 
   const handleProceed = async (jobId: number) => {
+    // Confirmation dialog
+    if (!confirm('Are you sure you want to apply to this job?')) {
+      return;
+    }
+
     try {
+      // Check if resume needs updating
+      const profileResponse = await fetch(`${API_URL}/api/profile`);
+      if (profileResponse.ok) {
+        const profile = await profileResponse.json();
+        const updatedAt = new Date(profile.updatedAt);
+        const oneYearAgo = new Date();
+        oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+
+        if (updatedAt < oneYearAgo) {
+          const shouldContinue = confirm(
+            '⚠️ Your resume was last updated over a year ago. Consider updating it before applying.\n\nDo you want to continue anyway?'
+          );
+          if (!shouldContinue) {
+            return;
+          }
+        }
+      }
+
       // Update status to approved
       await fetch(`${API_URL}/api/jobs/${jobId}/status`, {
         method: 'PATCH',
@@ -334,6 +357,48 @@ export default function Home() {
     }
   };
 
+  const handleRescoreJobs = async () => {
+    if (refreshing) return;
+
+    if (
+      !confirm(
+        'This will calculate match scores for jobs that are missing them. It may take a few minutes. Continue?'
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setRefreshing(true);
+
+      const response = await fetch(`${API_URL}/api/jobs/rescore`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to rescore jobs');
+      }
+
+      const data = await response.json();
+
+      if (data.scoredCount === 0) {
+        alert('✓ All jobs already have match scores!');
+      } else {
+        alert(
+          `✓ Rescoring completed!\n\nScored: ${data.scoredCount}\nFailed: ${data.failedCount}\nTotal: ${data.totalJobs}`
+        );
+      }
+
+      // Refresh the jobs list
+      await fetchJobs();
+    } catch (error) {
+      console.error('Error rescoring jobs:', error);
+      alert('Failed to rescore jobs. Please make sure you have a profile set up.');
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Automation Modal */}
@@ -385,6 +450,17 @@ export default function Home() {
                 ) : (
                   '🔄 Refresh Jobs'
                 )}
+              </button>
+              <button
+                onClick={handleRescoreJobs}
+                disabled={refreshing}
+                className={`px-4 py-2 rounded-lg transition font-medium ${
+                  refreshing
+                    ? 'bg-gray-400 text-white cursor-not-allowed'
+                    : 'bg-purple-600 text-white hover:bg-purple-700'
+                }`}
+              >
+                🎯 Rescore Jobs
               </button>
               <Link
                 href="/profile"

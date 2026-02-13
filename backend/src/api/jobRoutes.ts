@@ -12,14 +12,10 @@ const router = Router();
 router.get('/applied', async (_req, res) => {
   try {
     const appliedJobs = await db
-      .select({
-        job: jobs,
-        submission: applicationSubmissions,
-      })
+      .select()
       .from(jobs)
-      .leftJoin(applicationSubmissions, eq(jobs.id, applicationSubmissions.jobId))
       .where(eq(jobs.status, 'applied'))
-      .orderBy(desc(applicationSubmissions.submittedAt));
+      .orderBy(sql`COALESCE(${jobs.postedAt}, ${jobs.createdAt}) DESC NULLS LAST`);
 
     res.json(appliedJobs);
     return;
@@ -292,6 +288,96 @@ router.post('/:id/apply', async (req, res) => {
       error: {
         code: 'AUTOMATION_ERROR',
         message: 'Failed to trigger automation',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        retryable: true,
+        timestamp: new Date().toISOString(),
+      },
+    });
+    return;
+  }
+});
+
+/**
+ * POST /api/jobs/rescore
+ * Rescore all jobs that don't have a match score
+ * Useful when profile is created after jobs are scraped
+ */
+router.post('/rescore', async (_req, res) => {
+  try {
+    // Import scoring service and profile
+    const { scoreJob } = await import('../services/scoringService.js');
+    const { userProfile } = await import('../db/schema.js');
+
+    // Get user profile
+    const profiles = await db.select().from(userProfile).limit(1);
+    if (profiles.length === 0) {
+      return res.status(400).json({
+        error: {
+          code: 'NO_PROFILE',
+          message: 'User profile not found. Please create a profile first.',
+          retryable: false,
+          timestamp: new Date().toISOString(),
+        },
+      });
+    }
+
+    const profile = profiles[0];
+
+    // Get all jobs without match scores
+    const jobsToScore = await db
+      .select()
+      .from(jobs)
+      .where(sql`${jobs.matchScore} IS NULL`);
+
+    if (jobsToScore.length === 0) {
+      return res.json({
+        message: 'All jobs already have match scores',
+        scoredCount: 0,
+        totalJobs: 0,
+      });
+    }
+
+    console.log(`Rescoring ${jobsToScore.length} jobs...`);
+
+    let scoredCount = 0;
+    let failedCount = 0;
+
+    // Score each job
+    for (const job of jobsToScore) {
+      try {
+        console.log(`Scoring: ${job.company} - ${job.title}`);
+        const score = await scoreJob(job.description, profile.resumeText);
+
+        if (score !== null) {
+          await db.update(jobs).set({ matchScore: score }).where(eq(jobs.id, job.id));
+          scoredCount++;
+          console.log(`✓ Scored ${job.title}: ${score}/100`);
+        } else {
+          failedCount++;
+          console.warn(`✗ Failed to score ${job.title}`);
+        }
+
+        // Small delay to avoid rate limiting
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      } catch (error) {
+        failedCount++;
+        console.error(`Error scoring job ${job.id}:`, error);
+      }
+    }
+
+    res.json({
+      message: 'Rescoring completed',
+      scoredCount,
+      failedCount,
+      totalJobs: jobsToScore.length,
+    });
+    return;
+  } catch (error) {
+    console.error('Error rescoring jobs:', error);
+    res.status(500).json({
+      error: {
+        code: 'RESCORE_ERROR',
+        message: 'Failed to rescore jobs',
         details: error instanceof Error ? error.message : 'Unknown error',
         retryable: true,
         timestamp: new Date().toISOString(),
