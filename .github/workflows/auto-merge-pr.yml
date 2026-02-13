@@ -1,0 +1,94 @@
+name: Auto-Merge PR
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+  check_suite:
+    types: [completed]
+  status: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+
+jobs:
+  auto-merge:
+    name: Auto-Merge if All Checks Pass
+    runs-on: ubuntu-latest
+    # Only run on PRs from branches in the same repo (not forks)
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - name: Check PR Labels
+        id: check-labels
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const labels = context.payload.pull_request.labels.map(l => l.name);
+            const hasAutoMerge = labels.includes('auto-merge');
+            const hasDoNotMerge = labels.includes('do-not-merge');
+            
+            console.log('Labels:', labels);
+            console.log('Has auto-merge:', hasAutoMerge);
+            console.log('Has do-not-merge:', hasDoNotMerge);
+            
+            return { autoMerge: hasAutoMerge, doNotMerge: hasDoNotMerge };
+
+      - name: Wait for CI Checks
+        if: fromJSON(steps.check-labels.outputs.result).autoMerge && !fromJSON(steps.check-labels.outputs.result).doNotMerge
+        uses: lewagon/wait-on-check-action@v1.3.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          check-regexp: '(Lint and Format Check|Test Backend|Build Backend|Build Frontend)'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 10
+          allowed-conclusions: success
+
+      - name: Auto-Merge PR
+        if: fromJSON(steps.check-labels.outputs.result).autoMerge && !fromJSON(steps.check-labels.outputs.result).doNotMerge
+        uses: actions/github-script@v7
+        with:
+          script: |
+            try {
+              await github.rest.pulls.merge({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.issue.number,
+                merge_method: 'squash',
+                commit_title: context.payload.pull_request.title,
+                commit_message: context.payload.pull_request.body
+              });
+              
+              console.log('✅ PR merged successfully!');
+              
+              // Add comment
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: '✅ All checks passed! Auto-merged successfully.'
+              });
+            } catch (error) {
+              console.error('Failed to merge PR:', error);
+              
+              // Add comment about failure
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `❌ Auto-merge failed: ${error.message}\n\nPlease merge manually.`
+              });
+            }
+
+      - name: Comment if Checks Failed
+        if: failure() && fromJSON(steps.check-labels.outputs.result).autoMerge
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '❌ Some CI checks failed. Please fix the issues before merging.\n\nRun `npm run lint:fix` and `npm run format` locally to fix common issues.'
+            });
